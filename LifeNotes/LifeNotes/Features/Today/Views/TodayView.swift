@@ -8,6 +8,7 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject var workspaceManager: WorkspaceManager
     @StateObject private var viewModel = TodayViewModel()
+    @State private var selectedTodoForEdit: Todo?
     
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -54,6 +55,9 @@ struct TodayView: View {
                 Task {
                     await viewModel.loadData(workspaceIds: newValue)
                 }
+            }
+            .sheet(item: $selectedTodoForEdit) { todo in
+                TodoDetailView(todo: todo)
             }
         }
     }
@@ -160,29 +164,46 @@ struct TodayView: View {
                     .padding()
             } else {
                 ForEach(viewModel.todayTasks) { todo in
-                    HStack(spacing: AppTheme.Spacing.sm) {
-                        Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(todo.isCompleted ? AppTheme.Colors.success : AppTheme.Colors.textSecondary)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(todo.title)
-                                .font(AppTheme.Fonts.body)
-                                .strikethrough(todo.isCompleted)
-                                .foregroundColor(todo.isCompleted ? AppTheme.Colors.textSecondary : AppTheme.Colors.textPrimary)
+                    Button(action: { selectedTodoForEdit = todo }) {
+                        HStack(spacing: AppTheme.Spacing.sm) {
+                            Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(todo.isCompleted ? AppTheme.Colors.success : AppTheme.Colors.textSecondary)
+                                .font(.system(size: 20))
                             
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Color(hex: todo.priority.color))
-                                    .frame(width: 6, height: 6)
-                                Text(todo.priority.rawValue.capitalized)
-                                    .font(AppTheme.Fonts.caption2)
-                                    .foregroundColor(AppTheme.Colors.textTertiary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(todo.title)
+                                    .font(AppTheme.Fonts.body)
+                                    .strikethrough(todo.isCompleted)
+                                    .foregroundColor(todo.isCompleted ? AppTheme.Colors.textSecondary : AppTheme.Colors.textPrimary)
+                                
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color(hex: todo.priority.color))
+                                        .frame(width: 6, height: 6)
+                                    Text(todo.priority.rawValue.capitalized)
+                                        .font(AppTheme.Fonts.caption2)
+                                        .foregroundColor(AppTheme.Colors.textTertiary)
+                                    
+                                    if !todo.subtasks.isEmpty {
+                                        Text("\(todo.subtasks.filter { $0.isCompleted }.count)/\(todo.subtasks.count)")
+                                            .font(AppTheme.Fonts.caption2)
+                                            .foregroundColor(AppTheme.Colors.textTertiary)
+                                    }
+                                }
                             }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(AppTheme.Colors.textTertiary)
+                                .font(.system(size: 12))
                         }
-                        
-                        Spacer()
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 8)
+                        .background(AppTheme.Colors.background)
+                        .cornerRadius(AppTheme.CornerRadius.small)
                     }
-                    .padding(.vertical, 4)
+                    .buttonStyle(.plain)
                 }
             }
         }

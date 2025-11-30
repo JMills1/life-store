@@ -85,16 +85,18 @@ class TodayViewModel: ObservableObject {
         do {
             let snapshot = try await db.collection("todos")
                 .whereField("workspaceId", in: workspaceIds)
-                .whereField("dueDate", isGreaterThanOrEqualTo: startOfDay)
-                .whereField("dueDate", isLessThan: endOfDay)
-                .order(by: "dueDate")
+                .whereField("isCompleted", isEqualTo: false)
                 .getDocuments()
             
             let loadedTasks: [Todo] = snapshot.documents.compactMap { doc in
                 try? doc.data(as: Todo.self)
-            }
+            }.filter { todo in
+                guard let dueDate = todo.dueDate else { return false }
+                return dueDate <= endOfDay
+            }.sorted { ($0.dueDate ?? Date.distantFuture) < ($1.dueDate ?? Date.distantFuture) }
+            
             todayTasks = loadedTasks
-            print("TodayViewModel: Loaded \(todayTasks.count) tasks for today")
+            print("TodayViewModel: Loaded \(todayTasks.count) tasks for today and overdue")
         } catch {
             print("Error loading today tasks: \(error.localizedDescription)")
         }

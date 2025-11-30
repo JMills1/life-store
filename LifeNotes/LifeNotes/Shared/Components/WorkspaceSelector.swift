@@ -51,6 +51,7 @@ struct WorkspaceSelectionSheet: View {
     @EnvironmentObject var workspaceManager: WorkspaceManager
     @State private var selectedIds: Set<String>
     @State private var workspaceToEdit: Workspace?
+    @State private var showingCreateWorkspace = false
     
     init() {
         _selectedIds = State(initialValue: Set(WorkspaceManager.shared.selectedWorkspaceIds))
@@ -103,7 +104,7 @@ struct WorkspaceSelectionSheet: View {
                 
                 Section {
                     Button("Create New Workspace") {
-                        
+                        showingCreateWorkspace = true
                     }
                 }
             }
@@ -119,6 +120,9 @@ struct WorkspaceSelectionSheet: View {
             }
             .sheet(item: $workspaceToEdit) { workspace in
                 EditWorkspaceView(workspace: workspace)
+            }
+            .sheet(isPresented: $showingCreateWorkspace) {
+                CreateWorkspaceView()
             }
         }
     }

@@ -42,55 +42,8 @@ struct WorkspaceManagementView: View {
     }
 }
 
-struct CreateWorkspaceView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var workspaceManager: WorkspaceManager
-    @State private var name = ""
-    @State private var selectedColor = "4CAF50"
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section("Workspace Details") {
-                    TextField("Name", text: $name)
-                }
-                
-                Section("Color") {
-                    ColorPickerView(selectedColor: $selectedColor, title: "Workspace Color")
-                }
-            }
-            .navigationTitle("New Workspace")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
-                        createWorkspace()
-                    }
-                    .disabled(name.isEmpty)
-                }
-            }
-        }
-    }
-    
-    private func createWorkspace() {
-        Task {
-            do {
-                var newWorkspace = try await workspaceManager.createWorkspace(name: name, type: .personal)
-                newWorkspace.color = selectedColor
-                print("Workspace created: \(name)")
-                dismiss()
-            } catch {
-                print("Error: \(error.localizedDescription)")
-            }
-        }
-    }
-}
-
 #Preview {
     WorkspaceManagementView()
+        .environmentObject(WorkspaceManager.shared)
 }
 

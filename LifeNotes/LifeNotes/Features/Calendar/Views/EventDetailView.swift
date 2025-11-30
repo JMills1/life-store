@@ -77,32 +77,32 @@ struct EventDetailView: View {
     
     private var eventDetails: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-            DetailRow(
+            DetailRowView(
                 icon: "calendar",
-                title: "Date",
+                label: "Date",
                 value: formatDateRange(viewModel.event.startDate, viewModel.event.endDate)
             )
             
             if !viewModel.event.isAllDay {
-                DetailRow(
+                DetailRowView(
                     icon: "clock",
-                    title: "Time",
+                    label: "Time",
                     value: "\(viewModel.event.startDate.formatted(date: .omitted, time: .shortened)) - \(viewModel.event.endDate.formatted(date: .omitted, time: .shortened))"
                 )
             }
             
             if let location = viewModel.event.location {
-                DetailRow(
+                DetailRowView(
                     icon: "location",
-                    title: "Location",
+                    label: "Location",
                     value: location
                 )
             }
             
             if !viewModel.event.reminders.isEmpty {
-                DetailRow(
+                DetailRowView(
                     icon: "bell",
-                    title: "Reminders",
+                    label: "Reminders",
                     value: "\(viewModel.event.reminders.count) reminder(s)"
                 )
             }
@@ -161,29 +161,6 @@ struct EventDetailView: View {
         Task {
             await viewModel.addComment(content: newComment)
             newComment = ""
-        }
-    }
-}
-
-struct DetailRow: View {
-    let icon: String
-    let title: String
-    let value: String
-    
-    var body: some View {
-        HStack(spacing: AppTheme.Spacing.sm) {
-            Image(systemName: icon)
-                .foregroundColor(AppTheme.Colors.primary)
-                .frame(width: 24)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(AppTheme.Fonts.caption1)
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-                Text(value)
-                    .font(AppTheme.Fonts.body)
-                    .foregroundColor(AppTheme.Colors.textPrimary)
-            }
         }
     }
 }

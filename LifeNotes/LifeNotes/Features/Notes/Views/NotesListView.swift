@@ -89,20 +89,11 @@ struct NotesListView: View {
     }
     
     private var emptyState: some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            Image(systemName: "note.text")
-                .font(.system(size: 60))
-                .foregroundColor(AppTheme.Colors.textSecondary)
-            
-            Text("No notes yet")
-                .font(AppTheme.Fonts.title3)
-                .foregroundColor(AppTheme.Colors.textPrimary)
-            
-            Text("Tap + to create your first note")
-                .font(AppTheme.Fonts.subheadline)
-                .foregroundColor(AppTheme.Colors.textSecondary)
-        }
-        .frame(maxHeight: .infinity)
+        EmptyStateView(
+            icon: "note.text",
+            title: "No notes yet",
+            subtitle: "Tap + to create your first note"
+        )
     }
 }
 

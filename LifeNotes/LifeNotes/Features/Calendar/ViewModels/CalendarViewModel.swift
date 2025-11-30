@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import FirebaseFirestore
 import Combine
 
 @MainActor
@@ -17,10 +16,9 @@ class CalendarViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isPremium = false
     
-    private let db = Firestore.firestore()
-    private var eventsListener: ListenerRegistration?
-    private var todosListener: ListenerRegistration?
-    private var notesListener: ListenerRegistration?
+    private let eventsRepository = FirestoreRepository<Event>(collectionName: "events")
+    private let todosRepository = FirestoreRepository<Todo>(collectionName: "todos")
+    private let notesRepository = FirestoreRepository<Note>(collectionName: "notes")
     
     func loadData(workspaceIds: [String]) async {
         guard !workspaceIds.isEmpty else {
@@ -32,59 +30,35 @@ class CalendarViewModel: ObservableObject {
         defer { isLoading = false }
         
         await loadUserPremiumStatus()
-        await loadEvents(workspaceIds: workspaceIds)
-        await loadTodos(workspaceIds: workspaceIds)
-        await loadNotes(workspaceIds: workspaceIds)
+        loadEvents(workspaceIds: workspaceIds)
+        loadTodos(workspaceIds: workspaceIds)
+        loadNotes(workspaceIds: workspaceIds)
     }
     
     private func loadUserPremiumStatus() async {
         guard let userId = AuthService.shared.currentUser?.id else { return }
-        
-        do {
-            let doc = try await db.collection("users").document(userId).getDocument()
-            if let user = try? doc.data(as: User.self) {
-                isPremium = user.isPremium
-            }
-        } catch {
-            print("Error loading premium status: \(error.localizedDescription)")
+        isPremium = await UserService.shared.getPremiumStatus(userId: userId)
+    }
+    
+    private func loadEvents(workspaceIds: [String]) {
+        eventsRepository.listen(field: "workspaceId", in: workspaceIds) { [weak self] events in
+            self?.events = events
+            print("CalendarViewModel: Loaded \(events.count) events")
         }
     }
     
-    private func loadEvents(workspaceIds: [String]) async {
-        eventsListener?.remove()
-        
-        print("CalendarViewModel: Loading events for \(workspaceIds.count) workspaces")
-        
-        eventsListener = db.collection("events")
-            .whereField("workspaceId", in: workspaceIds)
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error listening to events: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else { return }
-                
-                self.events = documents.compactMap { doc in
-                    try? doc.data(as: Event.self)
-                }
-            }
-    }
-    
     func createEvent(_ event: Event) async throws {
-        _ = try db.collection("events").addDocument(from: event)
+        _ = try await eventsRepository.create(event)
     }
     
     func updateEvent(_ event: Event) async throws {
         guard let eventId = event.id else { return }
-        try db.collection("events").document(eventId).setData(from: event)
+        try await eventsRepository.update(event, documentId: eventId)
     }
     
     func deleteEvent(_ event: Event) async throws {
         guard let eventId = event.id else { return }
-        try await db.collection("events").document(eventId).delete()
+        try await eventsRepository.delete(documentId: eventId)
     }
     
     func eventsForDate(_ date: Date) -> [Event] {
@@ -93,27 +67,11 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    private func loadTodos(workspaceIds: [String]) async {
-        todosListener?.remove()
-        
-        print("CalendarViewModel: Loading todos for \(workspaceIds.count) workspaces")
-        
-        todosListener = db.collection("todos")
-            .whereField("workspaceId", in: workspaceIds)
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error listening to todos: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else { return }
-                
-                self.todos = documents.compactMap { doc in
-                    try? doc.data(as: Todo.self)
-                }
-            }
+    private func loadTodos(workspaceIds: [String]) {
+        todosRepository.listen(field: "workspaceId", in: workspaceIds) { [weak self] todos in
+            self?.todos = todos
+            print("CalendarViewModel: Loaded \(todos.count) todos")
+        }
     }
     
     func todosForDate(_ date: Date) -> [Todo] {
@@ -124,27 +82,11 @@ class CalendarViewModel: ObservableObject {
         }
     }
     
-    private func loadNotes(workspaceIds: [String]) async {
-        notesListener?.remove()
-        
-        print("CalendarViewModel: Loading notes for \(workspaceIds.count) workspaces")
-        
-        notesListener = db.collection("notes")
-            .whereField("workspaceId", in: workspaceIds)
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error listening to notes: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else { return }
-                
-                self.notes = documents.compactMap { doc in
-                    try? doc.data(as: Note.self)
-                }.filter { $0.linkedDate != nil }
-            }
+    private func loadNotes(workspaceIds: [String]) {
+        notesRepository.listen(field: "workspaceId", in: workspaceIds) { [weak self] notes in
+            self?.notes = notes.filter { $0.linkedDate != nil }
+            print("CalendarViewModel: Loaded \(notes.count) notes")
+        }
     }
     
     func notesForDate(_ date: Date) -> [Note] {
@@ -153,12 +95,6 @@ class CalendarViewModel: ObservableObject {
             guard let linkedDate = note.linkedDate else { return false }
             return calendar.isDate(linkedDate, inSameDayAs: date)
         }
-    }
-    
-    deinit {
-        eventsListener?.remove()
-        todosListener?.remove()
-        notesListener?.remove()
     }
 }
 

@@ -73,7 +73,7 @@ class WorkspaceManager: ObservableObject {
         print("WorkspaceManager: Switched to workspace - \(workspace.name)")
     }
     
-    func createWorkspace(name: String, type: Workspace.WorkspaceType, familyId: String? = nil) async throws -> Workspace {
+    func createWorkspace(name: String, type: Workspace.WorkspaceType, color: String = "4CAF50", familyId: String? = nil) async throws -> Workspace {
         guard let userId = AuthService.shared.currentUser?.id else {
             throw NSError(domain: "WorkspaceManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "No user ID"])
         }
@@ -83,6 +83,7 @@ class WorkspaceManager: ObservableObject {
             type: type,
             ownerId: userId,
             familyId: familyId,
+            color: color,
             members: [WorkspaceMember(userId: userId, role: .owner)]
         )
         

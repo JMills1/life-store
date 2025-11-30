@@ -20,12 +20,6 @@ struct TodoListView: View {
                         Section("Active") {
                             ForEach(viewModel.activeTodos) { todo in
                                 TodoRowView(todo: todo, viewModel: viewModel)
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                        Button(action: { selectedTodoForEdit = todo }) {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        .tint(AppTheme.Colors.secondary)
-                                    }
                             }
                         }
                         
@@ -65,7 +59,7 @@ struct TodoListView: View {
                 WorkspaceSelectorView()
             }
             .sheet(item: $selectedTodoForEdit) { todo in
-                EditTodoView(todo: todo)
+                TodoDetailView(todo: todo)
             }
             .task {
                 if let workspaceId = workspaceManager.selectedWorkspace?.id {
@@ -83,20 +77,11 @@ struct TodoListView: View {
     }
     
     private var emptyState: some View {
-        VStack(spacing: AppTheme.Spacing.md) {
-            Image(systemName: "checklist")
-                .font(.system(size: 60))
-                .foregroundColor(AppTheme.Colors.textSecondary)
-            
-            Text("No tasks yet")
-                .font(AppTheme.Fonts.title3)
-                .foregroundColor(AppTheme.Colors.textPrimary)
-            
-            Text("Tap + to create your first task")
-                .font(AppTheme.Fonts.subheadline)
-                .foregroundColor(AppTheme.Colors.textSecondary)
-        }
-        .frame(maxHeight: .infinity)
+        EmptyStateView(
+            icon: "checklist",
+            title: "No tasks yet",
+            subtitle: "Tap + to create your first task"
+        )
     }
 }
 
@@ -116,8 +101,8 @@ struct TodoRowView: View {
     }
     
     var body: some View {
-        Button(action: { showingEditSheet = true }) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
+            Button(action: { showingEditSheet = true }) {
                 HStack(spacing: AppTheme.Spacing.sm) {
                     Image(systemName: todo.isCompleted ? "checkmark.circle.fill" : "circle")
                         .foregroundColor(todo.isCompleted ? AppTheme.Colors.success : AppTheme.Colors.textSecondary)
@@ -168,32 +153,31 @@ struct TodoRowView: View {
                     
                     Spacer()
                 }
-        }
-        .buttonStyle(.plain)
-                
-                if isExpanded && !todo.subtasks.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(todo.subtasks.enumerated()), id: \.element.id) { index, subtask in
-                            HStack(spacing: 8) {
-                                Image(systemName: subtask.isCompleted ? "checkmark.square.fill" : "square")
-                                    .foregroundColor(subtask.isCompleted ? AppTheme.Colors.success : AppTheme.Colors.textSecondary)
-                                    .font(.system(size: 16))
-                                    .onTapGesture {
-                                        toggleSubtask(at: index)
-                                    }
-                                
-                                Text(subtask.title)
-                                    .font(AppTheme.Fonts.caption1)
-                                    .foregroundColor(subtask.isCompleted ? AppTheme.Colors.textSecondary : AppTheme.Colors.textPrimary)
-                                    .strikethrough(subtask.isCompleted)
-                                
-                                Spacer()
-                            }
-                            .padding(.leading, 32)
+            }
+            .buttonStyle(.plain)
+            
+            if isExpanded && !todo.subtasks.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(todo.subtasks.enumerated()), id: \.element.id) { index, subtask in
+                        HStack(spacing: 8) {
+                            Image(systemName: subtask.isCompleted ? "checkmark.square.fill" : "square")
+                                .foregroundColor(subtask.isCompleted ? AppTheme.Colors.success : AppTheme.Colors.textSecondary)
+                                .font(.system(size: 16))
+                                .onTapGesture {
+                                    toggleSubtask(at: index)
+                                }
+                            
+                            Text(subtask.title)
+                                .font(AppTheme.Fonts.caption1)
+                                .foregroundColor(subtask.isCompleted ? AppTheme.Colors.textSecondary : AppTheme.Colors.textPrimary)
+                                .strikethrough(subtask.isCompleted)
+                            
+                            Spacer()
                         }
+                        .padding(.leading, 32)
                     }
-                    .padding(.top, 4)
                 }
+                .padding(.top, 4)
             }
         }
         .padding(AppTheme.Spacing.sm)

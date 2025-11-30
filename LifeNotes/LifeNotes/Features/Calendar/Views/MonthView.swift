@@ -11,19 +11,10 @@ struct MonthView: View {
     let todos: [Todo]
     let notes: [Note]
     
-    @State private var currentMonth: Date
     @State private var showingEventList = false
     @State private var selectedEvent: Event?
     
     private let calendar = Calendar.current
-    
-    init(selectedDate: Binding<Date>, events: [Event], todos: [Todo] = [], notes: [Note] = []) {
-        self._selectedDate = selectedDate
-        self.events = events
-        self.todos = todos
-        self.notes = notes
-        self._currentMonth = State(initialValue: selectedDate.wrappedValue)
-    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -32,9 +23,9 @@ struct MonthView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(monthsToDisplay, id: \.self) { month in
-                            MonthGridView(
-                                currentMonth: month,
+                        ForEach(Array(weeksToDisplay.enumerated()), id: \.offset) { index, weekStart in
+                            WeekView(
+                                weekStart: weekStart,
                                 selectedDate: selectedDate,
                                 events: events,
                                 todos: todos,
@@ -44,21 +35,17 @@ struct MonthView: View {
                                     showingEventList = true
                                 }
                             )
-                            .id(month)
+                            .id(index)
                         }
                     }
                 }
                 .onAppear {
-                    let today = Date()
-                    
-                    let startOfWeek = calendar.dateInterval(of: .weekOfMonth, for: today)?.start ?? today
-                    let monthOfWeek = calendar.date(from: calendar.dateComponents([.year, .month], from: startOfWeek))!
-                    
-                    if let targetMonth = monthsToDisplay.first(where: { 
-                        calendar.isDate($0, equalTo: monthOfWeek, toGranularity: .month)
-                    }) {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            proxy.scrollTo(targetMonth, anchor: .top)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if let todayWeekIndex = weeksToDisplay.firstIndex(where: { weekStart in
+                            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+                            return Date() >= weekStart && Date() <= weekEnd
+                        }) {
+                            proxy.scrollTo(todayWeekIndex, anchor: .top)
                         }
                     }
                 }
@@ -95,40 +82,23 @@ struct MonthView: View {
         .background(AppTheme.Colors.background)
     }
     
-    private var monthsToDisplay: [Date] {
-        var months: [Date] = []
+    private var weeksToDisplay: [Date] {
+        var weeks: [Date] = []
         let today = Date()
         
-        let weekOfYear = calendar.component(.weekOfYear, from: today)
-        let year = calendar.component(.year, from: today)
-        
-        var dateComponents = DateComponents()
-        dateComponents.year = year
-        dateComponents.weekOfYear = weekOfYear
-        dateComponents.weekday = 1
-        
-        guard let startOfWeek = calendar.date(from: dateComponents) else {
-            let startMonth = calendar.date(byAdding: .month, value: -6, to: today)!
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: startMonth))!
-            
-            for offset in 0..<24 {
-                if let month = calendar.date(byAdding: .month, value: offset, to: startOfMonth) {
-                    months.append(month)
-                }
-            }
-            return months
+        guard let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start else {
+            return []
         }
         
-        let monthOfWeek = calendar.date(from: calendar.dateComponents([.year, .month], from: startOfWeek))!
-        let startMonth = calendar.date(byAdding: .month, value: -6, to: monthOfWeek)!
+        let startWeek = calendar.date(byAdding: .weekOfYear, value: -26, to: todayWeekStart)!
         
-        for offset in 0..<24 {
-            if let month = calendar.date(byAdding: .month, value: offset, to: startMonth) {
-                months.append(month)
+        for offset in 0..<104 {
+            if let weekStart = calendar.date(byAdding: .weekOfYear, value: offset, to: startWeek) {
+                weeks.append(weekStart)
             }
         }
         
-        return months
+        return weeks
     }
     
     private var eventsForSelectedDate: [Event] {
@@ -242,7 +212,7 @@ struct EventListSheet: View {
                 }
             }
             .sheet(item: $selectedTodoForEdit) { todo in
-                EditTodoView(todo: todo)
+                TodoDetailView(todo: todo)
             }
             .sheet(item: $selectedNoteForEdit) { note in
                 NoteEditorView(note: note)

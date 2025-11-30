@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import FirebaseFirestore
 import Combine
 
 @MainActor
@@ -14,8 +13,7 @@ class NotesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isPremium = false
     
-    private let db = Firestore.firestore()
-    private var notesListener: ListenerRegistration?
+    private let repository = FirestoreRepository<Note>(collectionName: "notes")
     
     var pinnedNotes: [Note] {
         notes.filter { $0.isPinned }
@@ -32,61 +30,33 @@ class NotesViewModel: ObservableObject {
         defer { isLoading = false }
         
         await loadUserPremiumStatus()
-        await loadNotes(workspaceId: workspaceId)
+        loadNotes(workspaceId: workspaceId)
     }
     
     private func loadUserPremiumStatus() async {
         guard let userId = AuthService.shared.currentUser?.id else { return }
-        
-        do {
-            let doc = try await db.collection("users").document(userId).getDocument()
-            if let user = try? doc.data(as: User.self) {
-                isPremium = user.isPremium
-            }
-        } catch {
-            print("Error loading premium status: \(error.localizedDescription)")
+        isPremium = await UserService.shared.getPremiumStatus(userId: userId)
+    }
+    
+    private func loadNotes(workspaceId: String) {
+        repository.listen(field: "workspaceId", isEqualTo: workspaceId) { [weak self] notes in
+            self?.notes = notes.sorted { $0.updatedAt > $1.updatedAt }
+            print("NotesViewModel: Loaded \(notes.count) notes")
         }
     }
     
-    private func loadNotes(workspaceId: String) async {
-        notesListener?.remove()
-        
-        print("NotesViewModel: Loading notes for workspace: \(workspaceId)")
-        
-        notesListener = db.collection("notes")
-            .whereField("workspaceId", isEqualTo: workspaceId)
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error listening to notes: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else { return }
-                
-                self.notes = documents.compactMap { doc in
-                    try? doc.data(as: Note.self)
-                }.sorted { $0.updatedAt > $1.updatedAt }
-            }
-    }
-    
     func createNote(_ note: Note) async throws {
-        _ = try db.collection("notes").addDocument(from: note)
+        _ = try await repository.create(note)
     }
     
     func updateNote(_ note: Note) async throws {
         guard let noteId = note.id else { return }
-        try db.collection("notes").document(noteId).setData(from: note)
+        try await repository.update(note, documentId: noteId)
     }
     
     func deleteNote(_ note: Note) async throws {
         guard let noteId = note.id else { return }
-        try await db.collection("notes").document(noteId).delete()
-    }
-    
-    deinit {
-        notesListener?.remove()
+        try await repository.delete(documentId: noteId)
     }
 }
 
