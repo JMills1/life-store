@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isMemberOfWorkspace(workspaceId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/workspaces/$(workspaceId)) &&
+        get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.members.hasAny([{
+          'userId': request.auth.uid
+        }]);
+    }
+    
+    function isMemberOfFamily(familyId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/families/$(familyId)) &&
+        get(/databases/$(database)/documents/families/$(familyId)).data.members.hasAny([{
+          'userId': request.auth.uid
+        }]);
+    }
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    match /families/{familyId} {
+      allow read: if isMemberOfFamily(familyId);
+      allow create: if isAuthenticated();
+      allow update: if isMemberOfFamily(familyId);
+      allow delete: if isOwner(resource.data.createdBy);
+    }
+    
+    match /workspaces/{workspaceId} {
+      allow read: if isMemberOfWorkspace(workspaceId);
+      allow create: if isAuthenticated();
+      allow update: if isMemberOfWorkspace(workspaceId);
+      allow delete: if isOwner(resource.data.ownerId);
+    }
+    
+    match /events/{eventId} {
+      allow read: if isMemberOfWorkspace(resource.data.workspaceId);
+      allow create: if isAuthenticated() && isMemberOfWorkspace(request.resource.data.workspaceId);
+      allow update: if isMemberOfWorkspace(resource.data.workspaceId);
+      allow delete: if isMemberOfWorkspace(resource.data.workspaceId);
+    }
+    
+    match /todos/{todoId} {
+      allow read: if isMemberOfWorkspace(resource.data.workspaceId);
+      allow create: if isAuthenticated() && isMemberOfWorkspace(request.resource.data.workspaceId);
+      allow update: if isMemberOfWorkspace(resource.data.workspaceId);
+      allow delete: if isMemberOfWorkspace(resource.data.workspaceId);
+    }
+    
+    match /notes/{noteId} {
+      allow read: if isMemberOfWorkspace(resource.data.workspaceId);
+      allow create: if isAuthenticated() && isMemberOfWorkspace(request.resource.data.workspaceId);
+      allow update: if isMemberOfWorkspace(resource.data.workspaceId);
+      allow delete: if isMemberOfWorkspace(resource.data.workspaceId);
+    }
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
