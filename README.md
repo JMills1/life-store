@@ -1,161 +1,109 @@
 # LifePlanner
 
-A family-focused life planning app for iOS with calendar, tasks, and notes. Built with SwiftUI, Firebase, and designed for future cross-platform expansion.
+A family-focused life planning iOS app with multi-member support, featuring calendar, to-do lists, notes, and secure workspace sharing.
 
 ## Features
 
-### Core Functionality
-- **Calendar** - TimeTree-inspired interface with month/week/day views
-- **Tasks** - Priority-based todo lists with calendar integration
-- **Notes** - Apple Notes-style interface with rich text support
-- **Family Workspaces** - Share calendars, tasks, and notes with family members
-- **Multi-Platform** - iOS app with Apple Watch support (Android planned)
+### Calendar
+- TimeTree-style interface with horizontal event spanning
+- Month, Week, and Day views
+- Continuous scrolling through months
+- Color-coded events by workspace
+- Event comments and collaboration
+- All-day events displayed separately
+- Calendar dots for events, tasks, and notes
 
-### Premium Features ($2.99/month)
-- Ad-free experience
-- Unlimited workspaces
-- Advanced family features
-- Priority support
-- Enhanced cloud sync
+### To Do Lists
+- Subtasks/checklist support
+- Priority levels (Low, Medium, High)
+- Due date integration with calendar
+- Workspace color borders
+- Quick edit via tap
+
+### Notes
+- Apple Notes-style interface
+- Calendar date linking
+- Pin important notes
+- Rich text support
+- Workspace organization
+
+### Workspaces
+- Personal and shared workspaces
+- Custom colors per workspace
+- Granular member permissions
+- Multi-workspace selection and filtering
+
+### User Features
+- Sign in with Apple
+- Email/password authentication
+- Personal color customization
+- Premium subscription ($2.99/month) to remove ads
+- Configurable notifications per workspace
 
 ## Tech Stack
 
-### Frontend (iOS)
-- SwiftUI
-- SwiftData (local caching)
-- Firebase iOS SDK
-- Google Mobile Ads SDK
-- StoreKit (In-App Purchases)
+- **Frontend**: SwiftUI, MVVM + Clean Architecture
+- **Backend**: Firebase (Firestore, Auth, Storage, Cloud Messaging)
+- **Authentication**: Sign in with Apple, Email/Password
+- **Monetization**: Google Mobile Ads SDK
+- **Widgets**: WidgetKit for iOS and Apple Watch
+- **State Management**: Combine, ObservableObject
 
-### Backend
-- Firebase Authentication (Apple Sign-In + Email/Password)
-- Cloud Firestore (real-time database)
-- Firebase Cloud Messaging (push notifications)
-- Firebase Storage (file attachments)
+## Quick Start
 
-### Architecture
-- MVVM pattern
-- Clean architecture (Domain/Data layers)
-- Repository pattern for data abstraction
-- Scalable for future Android development
-
-## Setup Instructions
-
-### Prerequisites
-1. Xcode 15+ (macOS Sonoma+)
-2. Apple Developer account
-3. Firebase account
-4. CocoaPods or Swift Package Manager
-
-### Firebase Setup
-See `SETUP.md` for detailed Firebase configuration instructions.
-
-### Dependencies (Swift Package Manager)
-
-Add these packages in Xcode:
-
-1. **Firebase iOS SDK**
-   - URL: `https://github.com/firebase/firebase-ios-sdk`
-   - Packages: FirebaseAuth, FirebaseFirestore, FirebaseMessaging, FirebaseStorage
-
-2. **Google Mobile Ads**
-   - URL: `https://github.com/googleads/swift-package-manager-google-mobile-ads`
-
-### Configuration Files Needed
-
-1. `GoogleService-Info.plist` - Download from Firebase Console
-2. Update `AppConfig.swift` with your AdMob IDs
-3. Configure Sign in with Apple in Apple Developer portal
-
-### Build & Run
+See [SETUP.md](SETUP.md) for detailed installation instructions.
 
 ```bash
-# Open project
+# Clone the repository
+git clone https://github.com/JMills1/life-store.git
+cd life-store
+
+# Open in Xcode
 open LifeNotes/LifeNotes.xcodeproj
 
-# Build in Xcode
-# Cmd+B to build
-# Cmd+R to run on simulator or device
+# Add Firebase and Google Mobile Ads dependencies
+# Add your GoogleService-Info.plist
+# Build and run
 ```
 
 ## Project Structure
 
 ```
 LifeNotes/
-├── Config/              # App & Firebase configuration
+├── Config/              # App and Firebase configuration
 ├── Domain/
-│   └── Models/          # Core business models
+│   └── Models/          # Data models (User, Event, Todo, Note, Workspace)
 ├── Features/
-│   ├── Authentication/  # Login, sign up, forgot password
-│   ├── Calendar/        # Calendar views & event management
-│   ├── Todos/           # Task list & task editor
-│   ├── Notes/           # Notes list & note editor
-│   ├── Family/          # Family groups & workspace sharing
-│   └── Settings/        # App settings & premium upgrade
-├── Services/            # Auth, notifications, etc.
+│   ├── Authentication/  # Login, signup, password reset
+│   ├── Calendar/        # Calendar views and event management
+│   ├── Todos/          # Task management
+│   ├── Notes/          # Note taking
+│   ├── Family/         # Family/group management
+│   ├── Today/          # Dashboard view
+│   └── Settings/       # App settings and preferences
+├── Services/           # AuthService, WorkspaceManager, NotificationService
 └── Shared/
-    ├── Components/      # Reusable UI components
-    └── Theme/           # Colors, fonts, spacing
+    ├── Components/     # Reusable UI components
+    ├── Extensions/     # Swift extensions
+    └── Theme/          # App theme and colors
 ```
 
-## Database Schema
+## Architecture
 
-See `SETUP.md` for complete Firestore schema.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
 
-Collections:
-- `users` - User profiles and preferences
-- `families` - Family groups
-- `workspaces` - Personal and shared workspaces
-- `events` - Calendar events
-- `todos` - Tasks
-- `notes` - Notes
+## Requirements
 
-## Monetization
-
-- **Free Tier**: Basic features with banner ads
-- **Premium**: $2.99/month subscription removes ads and unlocks advanced features
-- Ads displayed on: Calendar view, Task list, Notes editor (banner at bottom)
-
-## Future Roadmap
-
-### Phase 1 (Current - MVP)
-- [x] Authentication
-- [x] Calendar (month/week/day views)
-- [x] Tasks with priority & due dates
-- [x] Notes with calendar linking
-- [x] Family groups
-- [x] Ad integration
-- [x] Premium subscription
-
-### Phase 2 (Next)
-- [ ] Apple Watch app & complications
-- [ ] Recurring events
-- [ ] File attachments
-- [ ] Rich text editor for notes
-- [ ] Advanced workspace permissions
-- [ ] Offline mode
-
-### Phase 3 (Future)
-- [ ] Android app
-- [ ] Web app
-- [ ] Widget extensions
-- [ ] Siri shortcuts
-- [ ] Advanced analytics
-
-## Testing
-
-Run on a real device for full functionality (Sign in with Apple requires physical device).
-
-```bash
-# Test mode uses AdMob test IDs
-# See AppConfig.swift DEBUG section
-```
-
-## Contributing
-
-This is a private project. For questions or issues, contact the development team.
+- iOS 17.0+
+- Xcode 15.0+
+- Swift 5.9+
+- Firebase account
+- Google AdMob account (for ads)
 
 ## License
 
-Proprietary - All rights reserved.
+Copyright © 2025. All rights reserved.
 
+## Contact
+
+For questions or support, please open an issue on GitHub.
