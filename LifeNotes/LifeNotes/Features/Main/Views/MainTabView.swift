@@ -48,19 +48,13 @@ struct MainTabView: View {
                     }
                     .tag(5)
             }
-            .accentColor(AppTheme.Colors.primary)
+            .accentColor(AppTheme.Colors.personalColor)
             
             if selectedTab != 5 {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        QuickAddButton()
-                            .environmentObject(workspaceManager)
-                            .padding()
-                            .padding(.bottom, 60)
-                    }
-                }
+                QuickAddButton()
+                    .environmentObject(workspaceManager)
+                    .padding()
+                    .padding(.bottom, 60)
             }
         }
     }

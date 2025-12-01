@@ -10,6 +10,8 @@ struct CreateTodoView: View {
     @EnvironmentObject var workspaceManager: WorkspaceManager
     @StateObject private var viewModel = TodoViewModel()
     
+    let prefilledDueDate: Date?
+    
     @State private var title = ""
     @State private var description = ""
     @State private var priority: Todo.Priority = .medium
@@ -17,6 +19,10 @@ struct CreateTodoView: View {
     @State private var dueDate = Date()
     @State private var subtasks: [Subtask] = []
     @State private var newSubtaskTitle = ""
+    
+    init(prefilledDueDate: Date? = nil) {
+        self.prefilledDueDate = prefilledDueDate
+    }
     
     var body: some View {
         NavigationView {
@@ -66,7 +72,11 @@ struct CreateTodoView: View {
                 Section("Due Date") {
                     Toggle("Set due date", isOn: $hasDueDate)
                     if hasDueDate {
-                        DatePicker("Due date", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
+                        CollapsibleDatePicker(
+                            label: "Due date",
+                            date: $dueDate,
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
                     }
                 }
                 
@@ -112,6 +122,12 @@ struct CreateTodoView: View {
                         saveTodo()
                     }
                     .disabled(title.isEmpty)
+                }
+            }
+            .onAppear {
+                if let prefilledDate = prefilledDueDate {
+                    hasDueDate = true
+                    dueDate = prefilledDate
                 }
             }
         }

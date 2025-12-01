@@ -87,30 +87,51 @@ struct TodoDetailView: View {
     }
     
     private var taskDetails: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+        HStack(spacing: AppTheme.Spacing.md) {
             if let dueDate = localTodo.dueDate {
-                DetailRowView(
-                    icon: "calendar",
-                    label: "Due Date",
-                    value: dueDate.formatted(date: .long, time: .omitted),
-                    valueColor: dueDate < Date() && !localTodo.isCompleted ? AppTheme.Colors.error : AppTheme.Colors.textPrimary
-                )
+                VStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                        .foregroundColor(AppTheme.Colors.personalColor)
+                        .font(.system(size: 20))
+                    Text("Due Date")
+                        .font(AppTheme.Fonts.caption2)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                    Text(dueDate.formatted(date: .abbreviated, time: .omitted))
+                        .font(AppTheme.Fonts.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(dueDate < Date() && !localTodo.isCompleted ? AppTheme.Colors.error : AppTheme.Colors.textPrimary)
+                }
+                .frame(maxWidth: .infinity)
             }
             
-            DetailRowView(
-                icon: "flag.fill",
-                label: "Priority",
-                value: localTodo.priority.rawValue.capitalized,
-                valueColor: Color(hex: localTodo.priority.color)
-            )
+            VStack(spacing: 4) {
+                Image(systemName: "flag.fill")
+                    .foregroundColor(Color(hex: localTodo.priority.color))
+                    .font(.system(size: 20))
+                Text("Priority")
+                    .font(AppTheme.Fonts.caption2)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+                Text(localTodo.priority.rawValue.capitalized)
+                    .font(AppTheme.Fonts.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(Color(hex: localTodo.priority.color))
+            }
+            .frame(maxWidth: .infinity)
             
             if let workspace = workspaceManager.availableWorkspaces.first(where: { $0.id == localTodo.workspaceId }) {
-                DetailRowView(
-                    icon: "folder.fill",
-                    label: "Workspace",
-                    value: workspace.name,
-                    valueColor: Color(hex: workspace.color)
-                )
+                VStack(spacing: 4) {
+                    Image(systemName: "folder.fill")
+                        .foregroundColor(Color(hex: workspace.color))
+                        .font(.system(size: 20))
+                    Text("Workspace")
+                        .font(AppTheme.Fonts.caption2)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                    Text(workspace.name)
+                        .font(AppTheme.Fonts.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(Color(hex: workspace.color))
+                }
+                .frame(maxWidth: .infinity)
             }
         }
         .padding()
@@ -136,7 +157,7 @@ struct TodoDetailView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(AppTheme.Colors.primary)
+                        .background(AppTheme.Colors.personalColor)
                         .clipShape(Capsule())
                 }
             }
@@ -185,7 +206,7 @@ struct TodoDetailView: View {
         VStack(spacing: AppTheme.Spacing.sm) {
             HStack(spacing: AppTheme.Spacing.sm) {
                 Image(systemName: "plus.circle.fill")
-                    .foregroundColor(AppTheme.Colors.primary)
+                    .foregroundColor(AppTheme.Colors.personalColor)
                     .font(.system(size: 20))
                 
                 TextField("Add checklist item", text: $newSubtaskTitle)

@@ -15,6 +15,8 @@ struct QuickAddButton: View {
         ZStack {
             if showingOptions {
                 VStack(spacing: AppTheme.Spacing.md) {
+                    Spacer()
+                    
                     QuickAddOption(
                         icon: "calendar.badge.plus",
                         title: "Event",
@@ -42,23 +44,32 @@ struct QuickAddButton: View {
                         showingOptions = false
                     }
                 }
-                .transition(.scale.combined(with: .opacity))
+                .padding(.horizontal)
+                .padding(.bottom, 80)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    showingOptions.toggle()
+            if !showingOptions {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                showingOptions = true
+                            }
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .frame(width: 56, height: 56)
+                                .background(AppTheme.Colors.personalColor)
+                                .clipShape(Circle())
+                                .shadow(radius: 4, y: 2)
+                        }
+                    }
                 }
-            }) {
-                Image(systemName: showingOptions ? "xmark" : "plus")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-                    .background(AppTheme.Colors.primary)
-                    .clipShape(Circle())
-                    .shadow(radius: 4, y: 2)
-                    .rotationEffect(.degrees(showingOptions ? 45 : 0))
             }
         }
         .sheet(isPresented: $showingCreateEvent) {

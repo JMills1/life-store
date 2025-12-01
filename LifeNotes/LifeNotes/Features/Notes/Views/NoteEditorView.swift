@@ -11,6 +11,7 @@ struct NoteEditorView: View {
     @StateObject private var viewModel = NotesViewModel()
     
     let note: Note?
+    let prefilledDate: Date?
     
     @State private var title: String
     @State private var content: String
@@ -18,13 +19,14 @@ struct NoteEditorView: View {
     @State private var linkedDate: Date
     @State private var isPinned: Bool
     
-    init(note: Note?) {
+    init(note: Note?, prefilledDate: Date? = nil) {
         self.note = note
+        self.prefilledDate = prefilledDate
         _title = State(initialValue: note?.title ?? "")
         _content = State(initialValue: note?.content ?? "")
         _isPinned = State(initialValue: note?.isPinned ?? false)
-        _hasLinkedDate = State(initialValue: note?.linkedDate != nil)
-        _linkedDate = State(initialValue: note?.linkedDate ?? Date())
+        _hasLinkedDate = State(initialValue: note?.linkedDate != nil || prefilledDate != nil)
+        _linkedDate = State(initialValue: note?.linkedDate ?? prefilledDate ?? Date())
     }
     
     var body: some View {

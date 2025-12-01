@@ -98,10 +98,8 @@ class FirestoreRepository<T: Codable> {
         listener = nil
     }
     
-    nonisolated deinit {
-        Task { @MainActor in
-            stopListening()
-        }
+    deinit {
+        listener?.remove()
     }
 }
 

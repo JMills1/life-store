@@ -92,19 +92,23 @@ struct SignUpView: View {
                             }
                             
                             Button(action: handleSignUp) {
-                                if authService.isLoading {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                } else {
-                                    Text("Sign Up")
-                                        .fontWeight(.semibold)
+                                HStack {
+                                    Spacer()
+                                    if authService.isLoading {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    } else {
+                                        Text("Sign Up")
+                                            .fontWeight(.semibold)
+                                    }
+                                    Spacer()
                                 }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(AppTheme.Colors.accent)
+                                .foregroundColor(.white)
+                                .cornerRadius(AppTheme.CornerRadius.medium)
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(AppTheme.Colors.accent)
-                            .foregroundColor(.white)
-                            .cornerRadius(AppTheme.CornerRadius.medium)
                             .disabled(!isFormValid || authService.isLoading)
                             .opacity(!isFormValid || authService.isLoading ? 0.6 : 1)
                         }

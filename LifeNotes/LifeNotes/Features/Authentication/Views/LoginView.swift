@@ -83,19 +83,23 @@ struct LoginView: View {
                             
                             // Sign In Button
                             Button(action: handleEmailSignIn) {
-                                if authService.isLoading {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                } else {
-                                    Text("Sign In")
-                                        .fontWeight(.semibold)
+                                HStack {
+                                    Spacer()
+                                    if authService.isLoading {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    } else {
+                                        Text("Sign In")
+                                            .fontWeight(.semibold)
+                                    }
+                                    Spacer()
                                 }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(AppTheme.Colors.accent)
+                                .foregroundColor(.white)
+                                .cornerRadius(AppTheme.CornerRadius.medium)
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(AppTheme.Colors.accent)
-                            .foregroundColor(.white)
-                            .cornerRadius(AppTheme.CornerRadius.medium)
                             .disabled(authService.isLoading || email.isEmpty || password.isEmpty)
                             .opacity((authService.isLoading || email.isEmpty || password.isEmpty) ? 0.6 : 1)
                             
@@ -145,7 +149,9 @@ struct LoginView: View {
                 }
             }
             .alert("Error", isPresented: $showingError) {
-                Button("OK", role: .cancel) { }
+                Button("OK", role: .cancel) {
+                    errorMessage = nil
+                }
             } message: {
                 Text(errorMessage ?? "An unknown error occurred")
             }
@@ -161,18 +167,27 @@ struct LoginView: View {
     // MARK: - Actions
     
     private func handleEmailSignIn() {
-        print("Sign In button tapped - Email: \(email)")
-        print("Password field has \(password.count) characters")
+        print("🔵 Sign In button tapped")
+        print("🔵 Email: \(email)")
+        print("🔵 Password length: \(password.count)")
+        print("🔵 isLoading: \(authService.isLoading)")
+        
+        guard !email.isEmpty, !password.isEmpty else {
+            print("🔴 Email or password is empty")
+            return
+        }
         
         Task {
             do {
-                print("Attempting sign in...")
+                print("🔵 Starting sign in task...")
                 try await authService.signInWithEmail(email: email, password: password)
-                print("Sign in succeeded!")
+                print("✅ Sign in succeeded!")
             } catch {
-                print("Sign in failed: \(error.localizedDescription)")
-                errorMessage = error.localizedDescription
-                showingError = true
+                print("🔴 Sign in failed: \(error)")
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showingError = true
+                }
             }
         }
     }

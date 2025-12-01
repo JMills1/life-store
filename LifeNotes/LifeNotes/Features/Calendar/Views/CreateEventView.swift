@@ -57,18 +57,28 @@ struct CreateEventView: View {
                 
                 Section("Time") {
                     Toggle("All Day", isOn: $isAllDay)
-                    DatePicker("Starts", selection: $startDate, displayedComponents: isAllDay ? [.date] : [.date, .hourAndMinute])
-                        .onChange(of: startDate) { oldValue, newStart in
+                    
+                    CollapsibleDatePicker(
+                        label: "Starts",
+                        date: $startDate,
+                        displayedComponents: isAllDay ? [.date] : [.date, .hourAndMinute],
+                        onChange: { newStart in
                             if newStart > endDate {
                                 endDate = newStart.addingTimeInterval(3600)
                             }
                         }
-                    DatePicker("Ends", selection: $endDate, displayedComponents: isAllDay ? [.date] : [.date, .hourAndMinute])
-                        .onChange(of: endDate) { oldValue, newEnd in
+                    )
+                    
+                    CollapsibleDatePicker(
+                        label: "Ends",
+                        date: $endDate,
+                        displayedComponents: isAllDay ? [.date] : [.date, .hourAndMinute],
+                        onChange: { newEnd in
                             if newEnd < startDate {
                                 endDate = startDate.addingTimeInterval(3600)
                             }
                         }
+                    )
                 }
                 
                 Section("Location") {

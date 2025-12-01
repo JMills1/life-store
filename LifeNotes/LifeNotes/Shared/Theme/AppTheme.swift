@@ -138,6 +138,16 @@ extension Color {
     }
 }
 
+// MARK: - Personal Color Helper
+extension AppTheme.Colors {
+    static var personalColor: Color {
+        if let hexColor = AuthService.shared.currentUser?.preferences.personalColor {
+            return Color(hex: hexColor)
+        }
+        return primary // Fallback to default
+    }
+}
+
 // MARK: - View Modifiers
 extension View {
     func cardStyle() -> some View {
@@ -153,20 +163,20 @@ extension View {
             .foregroundColor(.white)
             .padding()
             .frame(maxWidth: .infinity)
-            .background(AppTheme.Colors.primary)
+            .background(AppTheme.Colors.personalColor)
             .cornerRadius(AppTheme.CornerRadius.medium)
     }
     
     func secondaryButton() -> some View {
         self
             .font(AppTheme.Fonts.headline)
-            .foregroundColor(AppTheme.Colors.primary)
+            .foregroundColor(AppTheme.Colors.personalColor)
             .padding()
             .frame(maxWidth: .infinity)
             .background(AppTheme.Colors.surface)
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
-                    .stroke(AppTheme.Colors.primary, lineWidth: 2)
+                    .stroke(AppTheme.Colors.personalColor, lineWidth: 2)
             )
     }
 }

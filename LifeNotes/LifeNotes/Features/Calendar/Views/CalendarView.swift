@@ -118,7 +118,7 @@ struct CalendarView: View {
                         .foregroundColor(calendarMode == mode ? .white : AppTheme.Colors.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, AppTheme.Spacing.sm)
-                        .background(calendarMode == mode ? AppTheme.Colors.primary : Color.clear)
+                        .background(calendarMode == mode ? AppTheme.Colors.personalColor : Color.clear)
                 }
             }
         }

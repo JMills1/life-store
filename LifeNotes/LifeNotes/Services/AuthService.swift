@@ -181,27 +181,20 @@ class AuthService: ObservableObject {
     // MARK: - User Data Management
     
     private func fetchUserData(uid: String) {
-        db.collection("users").document(uid).getDocument { [weak self] snapshot, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                print("Error fetching user data: \(error.localizedDescription)")
-                return
-            }
-            
-            guard let snapshot = snapshot, snapshot.exists else {
-                print("User document doesn't exist")
-                return
-            }
-            
+        Task { @MainActor in
             do {
-                let user = try snapshot.data(as: User.self)
-                DispatchQueue.main.async {
-                    self.currentUser = user
-                    self.isAuthenticated = true
+                let snapshot = try await db.collection("users").document(uid).getDocument()
+                
+                guard snapshot.exists else {
+                    print("User document doesn't exist")
+                    return
                 }
+                
+                let user = try snapshot.data(as: User.self)
+                self.currentUser = user
+                self.isAuthenticated = true
             } catch {
-                print("Error decoding user: \(error.localizedDescription)")
+                print("Error fetching user data: \(error.localizedDescription)")
             }
         }
     }

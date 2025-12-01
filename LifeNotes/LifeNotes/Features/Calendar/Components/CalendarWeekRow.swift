@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct WeekView: View {
+struct CalendarWeekRow: View {
     let weekStart: Date
     let selectedDate: Date
     let events: [Event]
@@ -12,8 +12,6 @@ struct WeekView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            monthHeaderIfNeeded
-            
             HStack(spacing: 0) {
                 ForEach(0..<7, id: \.self) { dayOffset in
                     if let date = calendar.date(byAdding: .day, value: dayOffset, to: weekStart) {
@@ -22,6 +20,27 @@ struct WeekView: View {
                 }
             }
             .frame(height: 60)
+            .overlay(alignment: .bottom) {
+                if let monthBoundaryIndex = monthBoundaryDayIndex {
+                    GeometryReader { geometry in
+                        let cellWidth = geometry.size.width / 7
+                        let xPosition = CGFloat(monthBoundaryIndex) * cellWidth
+                        let personalColor = AuthService.shared.currentUser?.preferences.personalColor ?? "EF5350"
+                        
+                        Path { path in
+                            // Start at bottom left
+                            path.move(to: CGPoint(x: 0, y: geometry.size.height))
+                            // Go to the boundary position at bottom
+                            path.addLine(to: CGPoint(x: xPosition, y: geometry.size.height))
+                            // Go up to top at boundary
+                            path.addLine(to: CGPoint(x: xPosition, y: 0))
+                            // Go to top right
+                            path.addLine(to: CGPoint(x: geometry.size.width, y: 0))
+                        }
+                        .stroke(Color(hex: personalColor).opacity(0.5), lineWidth: 2)
+                    }
+                }
+            }
             
             VStack(spacing: 2) {
                 ForEach(eventsForWeek.prefix(3), id: \.id) { event in
@@ -33,26 +52,19 @@ struct WeekView: View {
         }
     }
     
-    private var monthHeaderIfNeeded: some View {
-        Group {
-            if calendar.component(.day, from: weekStart) == 1 {
-                HStack {
-                    Text(weekStart.formatted(.dateTime.month(.wide).year()))
-                        .font(AppTheme.Fonts.headline)
-                        .foregroundColor(AppTheme.Colors.textPrimary)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                    Spacer()
-                }
-                .background(AppTheme.Colors.background)
+    private var monthBoundaryDayIndex: Int? {
+        for (index, date) in weekDates.enumerated() {
+            if calendar.component(.day, from: date) == 1 {
+                return index
             }
         }
+        return nil
     }
     
     private func dayCell(for date: Date) -> some View {
-        let isFirstOfMonth = calendar.component(.day, from: date) == 1
         let personalColor = AuthService.shared.currentUser?.preferences.personalColor ?? "EF5350"
         let itemsForDate = itemsForDate(date)
+        let isFirstOfMonth = calendar.component(.day, from: date) == 1
         
         return Button(action: { onDateTap(date) }) {
             ZStack(alignment: .topTrailing) {
@@ -83,12 +95,12 @@ struct WeekView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                if isFirstOfMonth && calendar.component(.day, from: weekStart) != 1 {
+                if isFirstOfMonth {
                     Text(date.formatted(.dateTime.month(.abbreviated)))
                         .font(.system(size: 8))
                         .foregroundColor(AppTheme.Colors.textSecondary)
                         .padding(.top, 2)
-                        .padding(.trailing, 4)
+                        .padding(.trailing, 2)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
