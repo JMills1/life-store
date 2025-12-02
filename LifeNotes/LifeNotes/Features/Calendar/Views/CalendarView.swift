@@ -37,7 +37,8 @@ struct CalendarView: View {
                 case .week:
                     WeekView(
                         selectedDate: $selectedDate,
-                        events: viewModel.events
+                        events: viewModel.events,
+                        workspaces: viewModel.selectedWorkspaces
                     )
                 case .day:
                     DayView(

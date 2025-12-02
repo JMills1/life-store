@@ -128,32 +128,92 @@ class TodayViewModel: ObservableObject {
         let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date()))!
         let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)!
         
+        // Load completed tasks this week
         do {
+            // Fetch all completed todos and filter in memory to avoid index requirements
             let tasksSnapshot = try await db.collection("todos")
                 .whereField("workspaceId", in: workspaceIds)
-                .whereField("completedAt", isGreaterThanOrEqualTo: weekStart)
-                .whereField("completedAt", isLessThan: weekEnd)
+                .whereField("isCompleted", isEqualTo: true)
                 .getDocuments()
             
-            let completedCount: Int = tasksSnapshot.documents.count
-            tasksCompletedThisWeek = completedCount
+            let completedTodos = tasksSnapshot.documents.compactMap { doc -> Todo? in
+                try? doc.data(as: Todo.self)
+            }
             
+            // Filter for this week
+            let completedThisWeek = completedTodos.filter { todo in
+                guard let completedAt = todo.completedAt else { return false }
+                return completedAt >= weekStart && completedAt < weekEnd
+            }
+            
+            tasksCompletedThisWeek = completedThisWeek.count
+            print("TodayViewModel: Loaded \(tasksCompletedThisWeek) completed tasks this week")
+        } catch {
+            print("Error loading completed tasks stats: \(error.localizedDescription)")
+            tasksCompletedThisWeek = 0
+        }
+        
+        // Load events this week
+        do {
             let eventsSnapshot = try await db.collection("events")
                 .whereField("workspaceId", in: workspaceIds)
                 .whereField("startDate", isGreaterThanOrEqualTo: weekStart)
                 .whereField("startDate", isLessThan: weekEnd)
                 .getDocuments()
             
-            let eventCount: Int = eventsSnapshot.documents.count
-            eventsThisWeek = eventCount
-            
-            print("TodayViewModel: Stats - \(tasksCompletedThisWeek) tasks, \(eventsThisWeek) events this week")
+            eventsThisWeek = eventsSnapshot.documents.count
+            print("TodayViewModel: Loaded \(eventsThisWeek) events this week")
         } catch {
-            print("Error loading stats: \(error.localizedDescription)")
+            print("Error loading events stats: \(error.localizedDescription)")
+            eventsThisWeek = 0
         }
         
-        let streakCount: Int = 0
-        currentStreak = streakCount
+        // Calculate streak
+        await calculateStreak(workspaceIds: workspaceIds)
+    }
+    
+    private func calculateStreak(workspaceIds: [String]) async {
+        do {
+            // Fetch all completed todos
+            let snapshot = try await db.collection("todos")
+                .whereField("workspaceId", in: workspaceIds)
+                .whereField("isCompleted", isEqualTo: true)
+                .getDocuments()
+            
+            let completedTodos = snapshot.documents.compactMap { doc -> Todo? in
+                try? doc.data(as: Todo.self)
+            }
+            
+            // Group by day and calculate streak
+            var streak = 0
+            var currentDate = calendar.startOfDay(for: Date())
+            
+            while true {
+                let nextDay = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+                let hasCompletedTask = completedTodos.contains { todo in
+                    guard let completedAt = todo.completedAt else { return false }
+                    return completedAt >= currentDate && completedAt < nextDay
+                }
+                
+                if hasCompletedTask {
+                    streak += 1
+                    currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate)!
+                } else {
+                    break
+                }
+                
+                // Safety limit
+                if streak > 365 {
+                    break
+                }
+            }
+            
+            currentStreak = streak
+            print("TodayViewModel: Current streak is \(streak) days")
+        } catch {
+            print("Error calculating streak: \(error.localizedDescription)")
+            currentStreak = 0
+        }
     }
 }
 

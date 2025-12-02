@@ -11,9 +11,19 @@
         {
           "fieldPath": "startDate",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "todos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "workspaceId",
+          "order": "ASCENDING"
         },
         {
-          "fieldPath": "__name__",
+          "fieldPath": "isCompleted",
           "order": "ASCENDING"
         }
       ]
@@ -29,10 +39,6 @@
         {
           "fieldPath": "completedAt",
           "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
         }
       ]
     },
@@ -41,19 +47,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "isPinned",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "workspaceId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "updatedAt",
-          "order": "DESCENDING"
+          "fieldPath": "isPinned",
+          "order": "ASCENDING"
         },
         {
-          "fieldPath": "__name__",
+          "fieldPath": "updatedAt",
           "order": "DESCENDING"
         }
       ]

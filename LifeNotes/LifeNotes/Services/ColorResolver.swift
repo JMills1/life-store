@@ -23,14 +23,17 @@ class ColorResolver {
             return Color(hex: customColor)
         }
         
-        // Otherwise use workspace color
+        // Otherwise use workspace color - CRITICAL: Must pass workspace, not fall back to personal color
         if let workspace = workspace {
             let personalColor = AuthService.shared.currentUser?.preferences.personalColor
             let currentUserId = AuthService.shared.currentUser?.id
-            return Color(hex: workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId))
+            let resolvedColor = workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId)
+            print("🎨 ColorResolver: Event '\(event.title)' in workspace '\(workspace.name)' (type: \(workspace.type.rawValue)) -> color: \(resolvedColor)")
+            return Color(hex: resolvedColor)
         }
         
-        // Fallback to default green
+        // Fallback to default green (should rarely happen)
+        print("⚠️ ColorResolver: Event '\(event.title)' has no workspace - using fallback color")
         return Color(hex: "4CAF50")
     }
     
@@ -40,14 +43,13 @@ class ColorResolver {
         if let workspace = workspace {
             let personalColor = AuthService.shared.currentUser?.preferences.personalColor
             let currentUserId = AuthService.shared.currentUser?.id
-            return Color(hex: workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId))
+            let resolvedColor = workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId)
+            print("🎨 ColorResolver: Todo '\(todo.title)' in workspace '\(workspace.name)' (type: \(workspace.type.rawValue)) -> color: \(resolvedColor)")
+            return Color(hex: resolvedColor)
         }
         
-        // Fallback to personal color or default
-        if let personalColor = AuthService.shared.currentUser?.preferences.personalColor {
-            return Color(hex: personalColor)
-        }
-        
+        // Fallback (should rarely happen)
+        print("⚠️ ColorResolver: Todo '\(todo.title)' has no workspace - using fallback color")
         return Color(hex: "EF5350")
     }
     
@@ -57,14 +59,13 @@ class ColorResolver {
         if let workspace = workspace {
             let personalColor = AuthService.shared.currentUser?.preferences.personalColor
             let currentUserId = AuthService.shared.currentUser?.id
-            return Color(hex: workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId))
+            let resolvedColor = workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId)
+            print("🎨 ColorResolver: Note '\(note.title)' in workspace '\(workspace.name)' (type: \(workspace.type.rawValue)) -> color: \(resolvedColor)")
+            return Color(hex: resolvedColor)
         }
         
-        // Fallback to personal color or default
-        if let personalColor = AuthService.shared.currentUser?.preferences.personalColor {
-            return Color(hex: personalColor)
-        }
-        
+        // Fallback (should rarely happen)
+        print("⚠️ ColorResolver: Note '\(note.title)' has no workspace - using fallback color")
         return Color(hex: "FFA726")
     }
     
@@ -75,14 +76,14 @@ class ColorResolver {
             return customColor
         }
         
-        // Otherwise use workspace color
+        // Otherwise use workspace color - CRITICAL: Must use workspace color, not personal
         if let workspace = workspace {
             let personalColor = AuthService.shared.currentUser?.preferences.personalColor
             let currentUserId = AuthService.shared.currentUser?.id
             return workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId)
         }
         
-        // Fallback to default green
+        // Fallback to default green (should rarely happen)
         return "4CAF50"
     }
     
@@ -94,8 +95,8 @@ class ColorResolver {
             return workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId)
         }
         
-        // Fallback to personal color or default
-        return AuthService.shared.currentUser?.preferences.personalColor ?? "EF5350"
+        // Fallback (should rarely happen)
+        return "EF5350"
     }
     
     /// Get the display color hex string for a note
@@ -106,8 +107,8 @@ class ColorResolver {
             return workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId)
         }
         
-        // Fallback to personal color or default
-        return AuthService.shared.currentUser?.preferences.personalColor ?? "FFA726"
+        // Fallback (should rarely happen)
+        return "FFA726"
     }
     
     // MARK: - Convenience Methods

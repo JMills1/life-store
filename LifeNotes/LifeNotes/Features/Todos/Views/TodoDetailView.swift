@@ -53,6 +53,14 @@ struct TodoDetailView: View {
             .sheet(isPresented: $showingEditSheet) {
                 EditTodoView(todo: localTodo)
             }
+            .onChange(of: showingEditSheet) { oldValue, newValue in
+                // Reload the todo when edit sheet is dismissed
+                if oldValue && !newValue {
+                    Task {
+                        await reloadTodo()
+                    }
+                }
+            }
         }
     }
     
@@ -255,12 +263,29 @@ struct TodoDetailView: View {
     private func saveTodo() {
         Task {
             do {
-                guard localTodo.id != nil else { return }
+                guard let todoId = localTodo.id else {
+                    print("⚠️ TodoDetailView: Cannot save todo - no ID")
+                    return
+                }
+                print("📝 TodoDetailView: Updating todo \(todoId) - '\(localTodo.title)'")
                 try await TodoViewModel().updateTodo(localTodo)
-                print("Todo updated successfully")
+                print("✅ TodoDetailView: Todo updated successfully")
             } catch {
-                print("Error updating todo: \(error.localizedDescription)")
+                print("❌ TodoDetailView: Error updating todo: \(error.localizedDescription)")
             }
+        }
+    }
+    
+    private func reloadTodo() async {
+        guard let todoId = localTodo.id else { return }
+        do {
+            let repository = FirestoreRepository<Todo>(collectionName: "todos")
+            if let updatedTodo = try await repository.get(documentId: todoId) {
+                localTodo = updatedTodo
+                print("🔄 TodoDetailView: Reloaded todo - due date: \(updatedTodo.dueDate?.formatted() ?? "none")")
+            }
+        } catch {
+            print("❌ TodoDetailView: Error reloading todo: \(error.localizedDescription)")
         }
     }
 }

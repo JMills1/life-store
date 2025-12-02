@@ -84,6 +84,7 @@ struct MonthView: View {
                 events: eventsForSelectedDate,
                 todos: todosForSelectedDate,
                 notes: notesForSelectedDate,
+                workspaces: workspaces,
                 onEventTap: { event in
                     selectedEvent = event
                     showingEventList = false
@@ -122,7 +123,7 @@ struct MonthView: View {
         }
         .padding(.horizontal)
         .padding(.top, 8)
-        .padding(.bottom, 12)
+        .padding(.bottom, 8)
         .background(AppTheme.Colors.background)
     }
     
@@ -266,6 +267,7 @@ struct EventListSheet: View {
     let events: [Event]
     let todos: [Todo]
     let notes: [Note]
+    let workspaces: [Workspace]
     let onEventTap: (Event) -> Void
     
     @State private var selectedTodoForEdit: Todo?
@@ -282,7 +284,7 @@ struct EventListSheet: View {
                     Section("Events") {
                         ForEach(events) { event in
                             Button(action: { onEventTap(event) }) {
-                                EventRow(event: event)
+                                EventRow(event: event, workspaces: workspaces)
                             }
                             .buttonStyle(.plain)
                         }

@@ -155,13 +155,19 @@ struct EditTodoView: View {
         updatedTodo.subtasks = subtasks
         updatedTodo.updatedAt = Date()
         
+        print("📝 EditTodoView: Saving todo \(updatedTodo.id ?? "no-id")")
+        print("   - Title: '\(updatedTodo.title)'")
+        print("   - Has due date: \(hasDueDate)")
+        print("   - Due date: \(updatedTodo.dueDate?.formatted() ?? "none")")
+        print("   - Priority: \(updatedTodo.priority.rawValue)")
+        
         Task {
             do {
                 try await viewModel.updateTodo(updatedTodo)
-                print("Task updated successfully")
+                print("✅ EditTodoView: Task updated successfully")
                 dismiss()
             } catch {
-                print("Error updating task: \(error.localizedDescription)")
+                print("❌ EditTodoView: Error updating task: \(error.localizedDescription)")
             }
         }
     }

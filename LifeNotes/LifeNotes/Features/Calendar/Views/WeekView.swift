@@ -8,6 +8,7 @@ import SwiftUI
 struct WeekView: View {
     @Binding var selectedDate: Date
     let events: [Event]
+    let workspaces: [Workspace]
     @State private var selectedEvent: Event?
     
     private let calendar = Calendar.current
@@ -95,9 +96,14 @@ struct WeekView: View {
                             Button(action: {
                                 selectedEvent = event
                             }) {
+                                let eventColor = ColorResolver.shared.colorForEvent(
+                                    event,
+                                    workspace: ColorResolver.shared.findWorkspace(id: event.workspaceId, in: workspaces)
+                                )
+                                
                                 HStack(spacing: AppTheme.Spacing.sm) {
                                     Rectangle()
-                                        .fill(Color(hex: event.color ?? "4CAF50"))
+                                        .fill(eventColor)
                                         .frame(width: 4)
                                     
                                     VStack(alignment: .leading, spacing: 4) {
@@ -143,7 +149,7 @@ struct WeekView: View {
                                         .foregroundColor(AppTheme.Colors.textTertiary)
                                 }
                                 .padding(AppTheme.Spacing.sm)
-                                .background(Color(hex: event.color ?? "4CAF50").opacity(0.08))
+                                .background(eventColor.opacity(0.08))
                                 .cornerRadius(AppTheme.CornerRadius.small)
                             }
                             .buttonStyle(.plain)

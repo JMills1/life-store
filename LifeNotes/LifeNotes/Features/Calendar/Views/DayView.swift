@@ -84,12 +84,17 @@ struct DayView: View {
                 HStack(spacing: 8) {
                     ForEach(allDayEvents) { event in
                         Button(action: { selectedEvent = event }) {
+                            let eventColor = ColorResolver.shared.colorForEvent(
+                                event,
+                                workspace: ColorResolver.shared.findWorkspace(id: event.workspaceId, in: workspaces)
+                            )
+                            
                             Text(event.title)
                                 .font(AppTheme.Fonts.caption1)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(Color(hex: event.color ?? "4CAF50"))
+                                .background(eventColor)
                                 .cornerRadius(AppTheme.CornerRadius.small)
                         }
                     }

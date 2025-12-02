@@ -21,7 +21,7 @@ struct CalendarWeekRow: View {
                 }
             }
             .frame(height: 60)
-            .padding(.top, 4)
+            .padding(.top, 8)
             .overlay(alignment: .bottom) {
                 if let monthBoundaryIndex = monthBoundaryDayIndex {
                     GeometryReader { geometry in

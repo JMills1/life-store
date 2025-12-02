@@ -17,7 +17,9 @@ class FirestoreRepository<T: Codable> {
     }
     
     func update(_ item: T, documentId: String) async throws {
+        print("🔄 FirestoreRepository: Updating document \(documentId) in collection '\(collectionName)'")
         try db.collection(collectionName).document(documentId).setData(from: item)
+        print("✅ FirestoreRepository: Document \(documentId) updated successfully")
     }
     
     func delete(documentId: String) async throws {
