@@ -221,17 +221,21 @@ class AuthService: ObservableObject {
             return
         }
         
+        // Get user's personal color to use as workspace color
+        let personalColor = currentUser?.preferences.personalColor ?? "EF5350"
+        
         let workspace = Workspace(
             name: "Personal",
             type: .personal,
             ownerId: userId,
+            color: personalColor, // Use personal color as workspace color
             icon: "person.fill",
             members: [WorkspaceMember(userId: userId, role: .owner)]
         )
         
         do {
             let docRef = try db.collection("workspaces").addDocument(from: workspace)
-            print("Created default workspace with ID: \(docRef.documentID)")
+            print("Created default workspace with ID: \(docRef.documentID) with color: \(personalColor)")
         } catch {
             print("Failed to create default workspace: \(error.localizedDescription)")
         }

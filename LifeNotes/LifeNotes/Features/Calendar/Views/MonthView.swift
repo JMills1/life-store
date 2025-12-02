@@ -5,88 +5,78 @@
 
 import SwiftUI
 
-struct VisibleWeekPreferenceKey: PreferenceKey {
-    static var defaultValue: Date?
-    
-    static func reduce(value: inout Date?, nextValue: () -> Date?) {
-        if value == nil {
-            value = nextValue()
-        }
-    }
-}
-
 struct MonthView: View {
     @Binding var selectedDate: Date
     let events: [Event]
     let todos: [Todo]
     let notes: [Note]
+    let workspaces: [Workspace]
     
     @State private var showingEventList = false
     @State private var selectedEvent: Event?
-    @State private var currentVisibleMonth: String = ""
-    @State private var hasScrolledToInitialPosition = false
+    @State private var currentMonthIndex: Int = 0
+    @State private var showingMonthYearPicker = false
     
     private let calendar = Calendar.current
     
     var body: some View {
         VStack(spacing: 0) {
-            if !currentVisibleMonth.isEmpty {
-                HStack {
-                    Text(currentVisibleMonth)
-                        .font(AppTheme.Fonts.title2)
-                        .fontWeight(.bold)
+            // Month header with navigation
+            HStack {
+                Button(action: previousMonth) {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
                         .foregroundColor(AppTheme.Colors.textPrimary)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                    Spacer()
                 }
-                .background(AppTheme.Colors.background)
+                
+                Spacer()
+                
+                Button(action: { showingMonthYearPicker = true }) {
+                    HStack(spacing: 4) {
+                        Text(monthYearString(for: monthsToDisplay[currentMonthIndex]))
+                            .font(AppTheme.Fonts.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                        
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: nextMonth) {
+                    Image(systemName: "chevron.right")
+                        .font(.title3)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                }
             }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            .background(AppTheme.Colors.background)
             
             weekdayHeader
             
-            ScrollViewReader { proxy in
-                GeometryReader { geometry in
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(Array(weeksToDisplay.enumerated()), id: \.offset) { index, weekStart in
-                                CalendarWeekRow(
-                                    weekStart: weekStart,
-                                    selectedDate: selectedDate,
-                                    events: events,
-                                    todos: todos,
-                                    notes: notes,
-                                    onDateTap: { date in
-                                        selectedDate = date
-                                        showingEventList = true
-                                    }
-                                )
-                                .id(index)
-                                .background(
-                                    GeometryReader { itemGeometry in
-                                        Color.clear.preference(
-                                            key: VisibleWeekPreferenceKey.self,
-                                            value: itemGeometry.frame(in: .named("scroll")).minY < 100 && itemGeometry.frame(in: .named("scroll")).maxY > 0 ? weekStart : nil
-                                        )
-                                    }
-                                )
-                            }
+            // Swipeable month pages
+            TabView(selection: $currentMonthIndex) {
+                ForEach(Array(monthsToDisplay.enumerated()), id: \.offset) { index, monthDate in
+                    SingleMonthView(
+                        monthDate: monthDate,
+                        selectedDate: $selectedDate,
+                        events: events,
+                        todos: todos,
+                        notes: notes,
+                        workspaces: workspaces,
+                        onDateTap: { date in
+                            selectedDate = date
+                            showingEventList = true
                         }
-                    }
-                    .coordinateSpace(name: "scroll")
-                    .onPreferenceChange(VisibleWeekPreferenceKey.self) { weekStart in
-                        if let weekStart = weekStart {
-                            updateVisibleMonth(for: weekStart)
-                        }
-                    }
-                }
-                .onAppear {
-                    if !hasScrolledToInitialPosition {
-                        scrollToToday(proxy: proxy)
-                        hasScrolledToInitialPosition = true
-                    }
+                    )
+                    .tag(index)
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
         }
         .sheet(isPresented: $showingEventList) {
             EventListSheet(
@@ -103,6 +93,22 @@ struct MonthView: View {
         .sheet(item: $selectedEvent) { event in
             EventDetailView(event: event)
         }
+        .sheet(isPresented: $showingMonthYearPicker) {
+            MonthYearPickerSheet(
+                selectedDate: monthsToDisplay[currentMonthIndex],
+                onDateSelected: { newDate in
+                    jumpToMonth(newDate)
+                    showingMonthYearPicker = false
+                }
+            )
+            .presentationDetents([.height(300)])
+        }
+        .onAppear {
+            // Set initial month to current month
+            if let todayIndex = monthsToDisplay.firstIndex(where: { calendar.isDate($0, equalTo: Date(), toGranularity: .month) }) {
+                currentMonthIndex = todayIndex
+            }
+        }
     }
     
     private var weekdayHeader: some View {
@@ -115,37 +121,56 @@ struct MonthView: View {
             }
         }
         .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
         .background(AppTheme.Colors.background)
     }
     
-    private var weeksToDisplay: [Date] {
-        var weeks: [Date] = []
+    // Generate months from 12 months ago to 12 months ahead
+    private var monthsToDisplay: [Date] {
+        var months: [Date] = []
         let today = Date()
         
-        print("🗓️ Today's date: \(today.formatted(date: .long, time: .omitted))")
-        
-        guard let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start else {
-            print("🔴 Failed to get week start for today")
-            return []
-        }
-        
-        print("🗓️ Today's week starts: \(todayWeekStart.formatted(date: .long, time: .omitted))")
-        
-        let startWeek = calendar.date(byAdding: .weekOfYear, value: -26, to: todayWeekStart)!
-        print("🗓️ Calendar starts from: \(startWeek.formatted(date: .long, time: .omitted))")
-        
-        for offset in 0..<104 {
-            if let weekStart = calendar.date(byAdding: .weekOfYear, value: offset, to: startWeek) {
-                weeks.append(weekStart)
+        for offset in -12...12 {
+            if let monthDate = calendar.date(byAdding: .month, value: offset, to: today) {
+                // Get first day of month
+                if let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: monthDate)) {
+                    months.append(firstDay)
+                }
             }
         }
         
-        print("🗓️ Generated \(weeks.count) weeks")
-        print("🗓️ First week: \(weeks.first?.formatted(date: .long, time: .omitted) ?? "none")")
-        print("🗓️ Last week: \(weeks.last?.formatted(date: .long, time: .omitted) ?? "none")")
-        
-        return weeks
+        return months
+    }
+    
+    private func monthYearString(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: date)
+    }
+    
+    private func previousMonth() {
+        withAnimation {
+            if currentMonthIndex > 0 {
+                currentMonthIndex -= 1
+            }
+        }
+    }
+    
+    private func nextMonth() {
+        withAnimation {
+            if currentMonthIndex < monthsToDisplay.count - 1 {
+                currentMonthIndex += 1
+            }
+        }
+    }
+    
+    private func jumpToMonth(_ date: Date) {
+        if let index = monthsToDisplay.firstIndex(where: { calendar.isDate($0, equalTo: date, toGranularity: .month) }) {
+            withAnimation {
+                currentMonthIndex = index
+            }
+        }
     }
     
     private var eventsForSelectedDate: [Event] {
@@ -165,40 +190,73 @@ struct MonthView: View {
             return calendar.isDate(linkedDate, inSameDayAs: selectedDate)
         }
     }
+}
+
+// Single month view showing all weeks that overlap with the month
+struct SingleMonthView: View {
+    let monthDate: Date
+    @Binding var selectedDate: Date
+    let events: [Event]
+    let todos: [Todo]
+    let notes: [Note]
+    let workspaces: [Workspace]
+    let onDateTap: (Date) -> Void
     
-    private func scrollToToday(proxy: ScrollViewProxy) {
-        let today = Date()
-        
-        guard let todayWeekInterval = calendar.dateInterval(of: .weekOfYear, for: today) else {
-            return
-        }
-        
-        for (index, weekStart) in weeksToDisplay.enumerated() {
-            guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: weekStart) else { continue }
-            
-            if calendar.isDate(todayWeekInterval.start, equalTo: weekInterval.start, toGranularity: .day) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    proxy.scrollTo(index, anchor: .top)
-                }
-                return
+    private let calendar = Calendar.current
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(weeksInMonth, id: \.self) { weekStart in
+                CalendarWeekRow(
+                    weekStart: weekStart,
+                    selectedDate: selectedDate,
+                    events: events,
+                    todos: todos,
+                    notes: notes,
+                    workspaces: workspaces,
+                    onDateTap: onDateTap
+                )
             }
+            
+            Spacer()
         }
     }
     
-    private func updateVisibleMonth(for weekStart: Date) {
-        let weekDates = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
+    // Get all weeks that overlap with this month (including partial weeks)
+    private var weeksInMonth: [Date] {
+        var weeks: [Date] = []
         
-        if let firstDayOfMonth = weekDates.first(where: { calendar.component(.day, from: $0) == 1 }) {
-            let monthYear = firstDayOfMonth.formatted(.dateTime.month(.wide).year())
-            if currentVisibleMonth != monthYear {
-                currentVisibleMonth = monthYear
-            }
-        } else if let middleDate = weekDates.first {
-            let monthYear = middleDate.formatted(.dateTime.month(.wide).year())
-            if currentVisibleMonth != monthYear {
-                currentVisibleMonth = monthYear
-            }
+        // Get the first day of the month
+        guard let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: monthDate)) else {
+            return []
         }
+        
+        // Get the last day of the month
+        guard let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart) else {
+            return []
+        }
+        
+        // Get the start of the week containing the first day of the month
+        guard let firstWeekStart = calendar.dateInterval(of: .weekOfYear, for: monthStart)?.start else {
+            return []
+        }
+        
+        // Get the start of the week containing the last day of the month
+        guard let lastWeekStart = calendar.dateInterval(of: .weekOfYear, for: monthEnd)?.start else {
+            return []
+        }
+        
+        // Generate all weeks from first to last
+        var currentWeek = firstWeekStart
+        while currentWeek <= lastWeekStart {
+            weeks.append(currentWeek)
+            guard let nextWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeek) else {
+                break
+            }
+            currentWeek = nextWeek
+        }
+        
+        return weeks
     }
 }
 
@@ -404,8 +462,79 @@ struct QuickAddButtonForSheet: View {
     }
 }
 
+// Month and Year Picker Sheet
+struct MonthYearPickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let selectedDate: Date
+    let onDateSelected: (Date) -> Void
+    
+    @State private var selectedMonth: Int
+    @State private var selectedYear: Int
+    
+    private let calendar = Calendar.current
+    private let months = Calendar.current.monthSymbols
+    private let years: [Int]
+    
+    init(selectedDate: Date, onDateSelected: @escaping (Date) -> Void) {
+        self.selectedDate = selectedDate
+        self.onDateSelected = onDateSelected
+        
+        let currentYear = Calendar.current.component(.year, from: Date())
+        self.years = Array((currentYear - 10)...(currentYear + 10))
+        
+        _selectedMonth = State(initialValue: Calendar.current.component(.month, from: selectedDate))
+        _selectedYear = State(initialValue: Calendar.current.component(.year, from: selectedDate))
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                HStack(spacing: 0) {
+                    // Month Picker
+                    Picker("Month", selection: $selectedMonth) {
+                        ForEach(1...12, id: \.self) { month in
+                            Text(months[month - 1])
+                                .tag(month)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+                    
+                    // Year Picker
+                    Picker("Year", selection: $selectedYear) {
+                        ForEach(years, id: \.self) { year in
+                            Text(String(year))
+                                .tag(year)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+                }
+                .padding()
+            }
+            .navigationTitle("Select Month")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        if let newDate = calendar.date(from: DateComponents(year: selectedYear, month: selectedMonth, day: 1)) {
+                            onDateSelected(newDate)
+                        }
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+}
 
 #Preview {
-    MonthView(selectedDate: .constant(Date()), events: [], todos: [], notes: [])
+    MonthView(selectedDate: .constant(Date()), events: [], todos: [], notes: [], workspaces: [])
 }
 

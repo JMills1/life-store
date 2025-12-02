@@ -8,6 +8,7 @@ import SwiftUI
 struct WeekView: View {
     @Binding var selectedDate: Date
     let events: [Event]
+    @State private var selectedEvent: Event?
     
     private let calendar = Calendar.current
     
@@ -15,13 +16,18 @@ struct WeekView: View {
         VStack(spacing: 0) {
             weekSelector
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 0) {
                     ForEach(daysInWeek, id: \.self) { day in
-                        dayColumn(for: day)
+                        dayRow(for: day)
+                        
+                        Divider()
                     }
                 }
             }
+        }
+        .sheet(item: $selectedEvent) { event in
+            EventDetailView(event: event)
         }
     }
     
@@ -29,50 +35,128 @@ struct WeekView: View {
         HStack {
             Button(action: previousWeek) {
                 Image(systemName: "chevron.left")
+                    .font(.title3)
+                    .foregroundColor(AppTheme.Colors.primary)
             }
             
             Spacer()
             
             Text(weekRange)
                 .font(AppTheme.Fonts.headline)
+                .foregroundColor(AppTheme.Colors.textPrimary)
             
             Spacer()
             
             Button(action: nextWeek) {
                 Image(systemName: "chevron.right")
+                    .font(.title3)
+                    .foregroundColor(AppTheme.Colors.primary)
             }
         }
         .padding()
+        .background(AppTheme.Colors.surface)
     }
     
-    private func dayColumn(for date: Date) -> some View {
-        VStack(spacing: 0) {
-            Text(date.formatted(.dateTime.weekday(.abbreviated)))
-                .font(AppTheme.Fonts.caption1)
-                .foregroundColor(AppTheme.Colors.textSecondary)
-            
-            Text("\(calendar.component(.day, from: date))")
-                .font(AppTheme.Fonts.body)
-                .foregroundColor(calendar.isDate(date, inSameDayAs: selectedDate) ? .white : AppTheme.Colors.textPrimary)
-                .frame(width: 32, height: 32)
-                .background(
-                    Circle()
-                        .fill(calendar.isDate(date, inSameDayAs: selectedDate) ? AppTheme.Colors.primary : Color.clear)
-                )
-                .onTapGesture {
-                    selectedDate = date
+    private func dayRow(for date: Date) -> some View {
+        let isToday = calendar.isDateInToday(date)
+        let dayEvents = eventsForDay(date)
+        
+        return VStack(alignment: .leading, spacing: 0) {
+            // Date header
+            HStack(spacing: AppTheme.Spacing.md) {
+                VStack(alignment: .center, spacing: 2) {
+                    Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                        .font(AppTheme.Fonts.caption1)
+                        .foregroundColor(isToday ? AppTheme.Colors.primary : AppTheme.Colors.textSecondary)
+                        .fontWeight(isToday ? .semibold : .regular)
+                    
+                    Text("\(calendar.component(.day, from: date))")
+                        .font(AppTheme.Fonts.title3)
+                        .foregroundColor(isToday ? .white : AppTheme.Colors.textPrimary)
+                        .fontWeight(isToday ? .bold : .regular)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(isToday ? AppTheme.Colors.primary : Color.clear)
+                        )
                 }
-            
-            ScrollView {
-                VStack(spacing: AppTheme.Spacing.xs) {
-                    ForEach(eventsForDay(date)) { event in
-                        EventCard(event: event)
+                .frame(width: 60)
+                
+                // Events for this day
+                if dayEvents.isEmpty {
+                    Text("No events")
+                        .font(AppTheme.Fonts.subheadline)
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, AppTheme.Spacing.lg)
+                } else {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                        ForEach(dayEvents) { event in
+                            Button(action: {
+                                selectedEvent = event
+                            }) {
+                                HStack(spacing: AppTheme.Spacing.sm) {
+                                    Rectangle()
+                                        .fill(Color(hex: event.color ?? "4CAF50"))
+                                        .frame(width: 4)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(event.title)
+                                            .font(AppTheme.Fonts.body)
+                                            .foregroundColor(AppTheme.Colors.textPrimary)
+                                            .lineLimit(1)
+                                        
+                                        HStack(spacing: 8) {
+                                            if event.isAllDay {
+                                                Text("All day")
+                                                    .font(AppTheme.Fonts.caption1)
+                                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                                            } else {
+                                                Text(event.startDate.formatted(date: .omitted, time: .shortened))
+                                                    .font(AppTheme.Fonts.caption1)
+                                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                                                
+                                                Text("-")
+                                                    .font(AppTheme.Fonts.caption1)
+                                                    .foregroundColor(AppTheme.Colors.textTertiary)
+                                                
+                                                Text(event.endDate.formatted(date: .omitted, time: .shortened))
+                                                    .font(AppTheme.Fonts.caption1)
+                                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                                            }
+                                            
+                                            if let location = event.location {
+                                                Text("•")
+                                                    .foregroundColor(AppTheme.Colors.textTertiary)
+                                                Text(location)
+                                                    .font(AppTheme.Fonts.caption1)
+                                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                                                    .lineLimit(1)
+                                            }
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(AppTheme.Colors.textTertiary)
+                                }
+                                .padding(AppTheme.Spacing.sm)
+                                .background(Color(hex: event.color ?? "4CAF50").opacity(0.08))
+                                .cornerRadius(AppTheme.CornerRadius.small)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, AppTheme.Spacing.md)
                 }
-                .padding(.vertical, AppTheme.Spacing.sm)
             }
+            .padding(.horizontal)
+            .padding(.vertical, AppTheme.Spacing.sm)
+            .background(isToday ? AppTheme.Colors.primary.opacity(0.03) : Color.clear)
         }
-        .frame(width: UIScreen.main.bounds.width / 7)
     }
     
     private var daysInWeek: [Date] {
@@ -115,27 +199,3 @@ struct WeekView: View {
         selectedDate = calendar.date(byAdding: .weekOfYear, value: 1, to: selectedDate) ?? selectedDate
     }
 }
-
-struct EventCard: View {
-    let event: Event
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(event.title)
-                .font(AppTheme.Fonts.caption1)
-                .fontWeight(.medium)
-                .lineLimit(1)
-            
-            if !event.isAllDay {
-                Text(event.startDate.formatted(date: .omitted, time: .shortened))
-                    .font(AppTheme.Fonts.caption2)
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-            }
-        }
-        .padding(4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: event.color ?? "4CAF50").opacity(0.2))
-        .cornerRadius(4)
-    }
-}
-

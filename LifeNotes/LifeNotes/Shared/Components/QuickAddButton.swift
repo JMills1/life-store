@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct QuickAddButton: View {
+    @ObservedObject private var authService = AuthService.shared
     @State private var showingOptions = false
     @State private var showingCreateEvent = false
     @State private var showingCreateTodo = false
@@ -64,7 +65,7 @@ struct QuickAddButton: View {
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
                                 .frame(width: 56, height: 56)
-                                .background(AppTheme.Colors.personalColor)
+                                .background(AppTheme.Colors.personalColor(from: authService))
                                 .clipShape(Circle())
                                 .shadow(radius: 4, y: 2)
                         }

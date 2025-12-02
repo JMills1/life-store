@@ -7,14 +7,17 @@ import SwiftUI
 
 struct EventRow: View {
     let event: Event
-    var workspace: Workspace? = nil
+    var workspaces: [Workspace] = []
     
     private var eventColor: Color {
-        Color(hex: event.color ?? "4CAF50")
+        ColorResolver.shared.colorForEvent(
+            event,
+            workspace: ColorResolver.shared.findWorkspace(id: event.workspaceId, in: workspaces)
+        )
     }
     
     private var borderColor: Color {
-        workspace.map { Color(hex: $0.color).darker() } ?? eventColor.darker()
+        eventColor.darker()
     }
     
     var body: some View {

@@ -52,12 +52,15 @@ struct EditWorkspaceView: View {
                     }
                 }
                 
-                Section {
-                    Button(role: .destructive, action: { showingDeleteAlert = true }) {
-                        HStack {
-                            Spacer()
-                            Text("Delete Workspace")
-                            Spacer()
+                // Only show delete option for shared workspaces
+                if workspace.type == .shared {
+                    Section {
+                        Button(role: .destructive, action: { showingDeleteAlert = true }) {
+                            HStack {
+                                Spacer()
+                                Text("Delete Workspace")
+                                Spacer()
+                            }
                         }
                     }
                 }
@@ -121,6 +124,12 @@ struct EditWorkspaceView: View {
     private func deleteWorkspace() {
         guard let workspaceId = workspace.id else { return }
         
+        // Safety check: never delete personal workspaces
+        guard workspace.type == .shared else {
+            print("Cannot delete personal workspace")
+            return
+        }
+        
         isLoading = true
         
         Task {
@@ -170,6 +179,7 @@ struct ColorPickerRow: View {
                                     .opacity(selectedColor == color ? 1 : 0)
                             )
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }

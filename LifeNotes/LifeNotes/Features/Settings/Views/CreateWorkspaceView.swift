@@ -2,89 +2,175 @@
 //  CreateWorkspaceView.swift
 //  LifePlanner
 //
+//  View for creating a new shared workspace
+//
 
 import SwiftUI
 
 struct CreateWorkspaceView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var workspaceManager: WorkspaceManager
+    @ObservedObject private var authService = AuthService.shared
     
-    @State private var name = ""
-    @State private var selectedColor = "4CAF50"
-    @State private var workspaceType: Workspace.WorkspaceType = .personal
-    @State private var isLoading = false
+    @State private var workspaceName = ""
+    @State private var selectedColor = "64B5F6" // Default blue
+    @State private var selectedIcon = "calendar"
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    
+    private let availableColors = [
+        "64B5F6", // Blue
+        "4CAF50", // Green
+        "FF8A65", // Coral
+        "AB47BC", // Purple
+        "EC407A", // Pink
+        "26C6DA", // Cyan
+        "FFCA28", // Amber
+        "78909C"  // Blue Gray
+    ]
+    
+    private let availableIcons = [
+        "calendar", "house.fill", "briefcase.fill", "heart.fill",
+        "star.fill", "flag.fill", "book.fill", "gamecontroller.fill"
+    ]
     
     var body: some View {
-        NavigationView {
-            Form {
+        Form {
                 Section("Workspace Details") {
-                    TextField("Name", text: $name)
-                    
-                    Picker("Type", selection: $workspaceType) {
-                        Text("Personal").tag(Workspace.WorkspaceType.personal)
-                        Text("Shared").tag(Workspace.WorkspaceType.shared)
-                    }
+                    TextField("Workspace Name", text: $workspaceName)
+                        .font(AppTheme.Fonts.body)
                 }
                 
-                Section("Color") {
-                    let colors = ["4CAF50", "2196F3", "FF9800", "E91E63", "9C27B0",
-                                  "00BCD4", "FFEB3B", "FF5722", "795548", "607D8B"]
-                    
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
-                        ForEach(colors, id: \.self) { color in
-                            Button(action: { selectedColor = color }) {
-                                Circle()
-                                    .fill(Color(hex: color))
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Color")
+                            .font(AppTheme.Fonts.subheadline)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                        
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
+                            ForEach(availableColors, id: \.self) { color in
+                                Button(action: {
+                                    print("Selected color: \(color)")
+                                    selectedColor = color
+                                }) {
+                                    ZStack {
                                         Circle()
-                                            .strokeBorder(AppTheme.Colors.primary, lineWidth: 3)
-                                            .opacity(selectedColor == color ? 1 : 0)
-                                    )
+                                            .fill(Color(hex: color))
+                                            .frame(width: 50, height: 50)
+                                        
+                                        if selectedColor == color {
+                                            Image(systemName: "checkmark")
+                                                .foregroundColor(.white)
+                                                .font(.title3)
+                                                .fontWeight(.bold)
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.borderless)
                             }
                         }
                     }
                     .padding(.vertical, 8)
                 }
-            }
-            .navigationTitle("New Workspace")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
+                
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Icon")
+                            .font(AppTheme.Fonts.subheadline)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                        
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
+                            ForEach(availableIcons, id: \.self) { icon in
+                                Button(action: {
+                                    print("Selected icon: \(icon)")
+                                    selectedIcon = icon
+                                }) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(selectedIcon == icon ? Color(hex: selectedColor) : AppTheme.Colors.background)
+                                            .frame(width: 50, height: 50)
+                                        
+                                        Image(systemName: icon)
+                                            .foregroundColor(selectedIcon == icon ? .white : AppTheme.Colors.textSecondary)
+                                            .font(.title3)
+                                    }
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
                     }
+                    .padding(.vertical, 8)
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
-                        createWorkspace()
+                Section {
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(AppTheme.Colors.error)
+                            .font(AppTheme.Fonts.caption1)
                     }
-                    .disabled(name.isEmpty || isLoading)
+                    
+                    Button(action: createWorkspace) {
+                        if isSaving {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                        } else {
+                            Text("Create Workspace")
+                                .frame(maxWidth: .infinity)
+                                .foregroundColor(AppTheme.Colors.primary)
+                        }
+                    }
+                    .disabled(workspaceName.isEmpty || isSaving)
+                }
+            }
+            .navigationTitle("New Workspace")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") {
+                    dismiss()
                 }
             }
         }
+        .dismissKeyboardOnTap()
     }
     
     private func createWorkspace() {
-        isLoading = true
+        guard let userId = authService.currentUser?.id else {
+            errorMessage = "You must be signed in"
+            return
+        }
+        
+        guard !workspaceName.isEmpty else {
+            errorMessage = "Please enter a workspace name"
+            return
+        }
+        
+        isSaving = true
+        errorMessage = nil
         
         Task {
             do {
-                _ = try await workspaceManager.createWorkspace(
-                    name: name,
-                    type: workspaceType,
-                    color: selectedColor
+                let workspace = Workspace(
+                    name: workspaceName,
+                    type: .shared,
+                    ownerId: userId,
+                    color: selectedColor,
+                    icon: selectedIcon,
+                    members: [WorkspaceMember(userId: userId, role: .owner)]
                 )
+                
+                try await workspaceManager.createWorkspace(workspace)
                 
                 await MainActor.run {
                     dismiss()
                 }
             } catch {
-                print("Error creating workspace: \(error.localizedDescription)")
+                errorMessage = error.localizedDescription
+                isSaving = false
             }
-            
-            isLoading = false
         }
     }
 }
@@ -93,4 +179,3 @@ struct CreateWorkspaceView: View {
     CreateWorkspaceView()
         .environmentObject(WorkspaceManager.shared)
 }
-

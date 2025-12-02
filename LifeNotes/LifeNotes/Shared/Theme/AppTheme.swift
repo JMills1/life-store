@@ -146,6 +146,14 @@ extension AppTheme.Colors {
         }
         return primary // Fallback to default
     }
+    
+    /// Get personal color reactively (observes AuthService changes)
+    static func personalColor(from authService: AuthService) -> Color {
+        if let hexColor = authService.currentUser?.preferences.personalColor {
+            return Color(hex: hexColor)
+        }
+        return primary
+    }
 }
 
 // MARK: - View Modifiers

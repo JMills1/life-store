@@ -7,6 +7,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @EnvironmentObject var workspaceManager: WorkspaceManager
+    @ObservedObject private var authService = AuthService.shared
     @StateObject private var viewModel = CalendarViewModel()
     @State private var selectedDate = Date()
     @State private var showingCreateEvent = false
@@ -30,7 +31,8 @@ struct CalendarView: View {
                         selectedDate: $selectedDate,
                         events: viewModel.events,
                         todos: viewModel.todos,
-                        notes: viewModel.notes
+                        notes: viewModel.notes,
+                        workspaces: viewModel.selectedWorkspaces
                     )
                 case .week:
                     WeekView(
@@ -40,7 +42,8 @@ struct CalendarView: View {
                 case .day:
                     DayView(
                         selectedDate: $selectedDate,
-                        events: viewModel.events
+                        events: viewModel.events,
+                        workspaces: workspaceManager.availableWorkspaces
                     )
                 }
                 
@@ -90,16 +93,20 @@ struct CalendarView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppTheme.Spacing.sm) {
                 ForEach(viewModel.selectedWorkspaces) { workspace in
+                    let personalColor = AuthService.shared.currentUser?.preferences.personalColor
+                    let currentUserId = AuthService.shared.currentUser?.id
+                    let displayColor = workspace.displayColor(personalColor: personalColor, currentUserId: currentUserId)
+                    
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(Color(hex: workspace.color))
+                            .fill(Color(hex: displayColor))
                             .frame(width: 6, height: 6)
                         Text(workspace.name)
                             .font(AppTheme.Fonts.caption1)
                     }
                     .padding(.horizontal, AppTheme.Spacing.sm)
                     .padding(.vertical, 4)
-                    .background(Color(hex: workspace.color).opacity(0.1))
+                    .background(Color(hex: displayColor).opacity(0.1))
                     .cornerRadius(AppTheme.CornerRadius.small)
                 }
             }
@@ -110,7 +117,9 @@ struct CalendarView: View {
     }
     
     private var calendarModeSelector: some View {
-        HStack(spacing: 0) {
+        let personalColor = AppTheme.Colors.personalColor(from: authService)
+        
+        return HStack(spacing: 0) {
             ForEach([CalendarMode.month, .week, .day], id: \.self) { mode in
                 Button(action: { calendarMode = mode }) {
                     Text(mode.title)
@@ -118,7 +127,7 @@ struct CalendarView: View {
                         .foregroundColor(calendarMode == mode ? .white : AppTheme.Colors.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, AppTheme.Spacing.sm)
-                        .background(calendarMode == mode ? AppTheme.Colors.personalColor : Color.clear)
+                        .background(calendarMode == mode ? personalColor : Color.clear)
                 }
             }
         }

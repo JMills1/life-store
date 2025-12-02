@@ -56,25 +56,24 @@ class TodayViewModel: ObservableObject {
     }
     
     private func loadUpcomingEvents(workspaceIds: [String]) async {
-        let now = Date()
-        let twoHoursLater = now.addingTimeInterval(2 * 3600)
+        let startOfDay = calendar.startOfDay(for: Date())
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
         do {
             let snapshot = try await db.collection("events")
                 .whereField("workspaceId", in: workspaceIds)
-                .whereField("startDate", isGreaterThanOrEqualTo: now)
-                .whereField("startDate", isLessThanOrEqualTo: twoHoursLater)
+                .whereField("startDate", isGreaterThanOrEqualTo: startOfDay)
+                .whereField("startDate", isLessThan: endOfDay)
                 .order(by: "startDate")
-                .limit(to: 3)
                 .getDocuments()
             
             let loadedEvents: [Event] = snapshot.documents.compactMap { doc in
                 try? doc.data(as: Event.self)
             }
             upcomingEvents = loadedEvents
-            print("TodayViewModel: Loaded \(upcomingEvents.count) upcoming events")
+            print("TodayViewModel: Loaded \(upcomingEvents.count) events for today")
         } catch {
-            print("Error loading upcoming events: \(error.localizedDescription)")
+            print("Error loading today's events: \(error.localizedDescription)")
         }
     }
     

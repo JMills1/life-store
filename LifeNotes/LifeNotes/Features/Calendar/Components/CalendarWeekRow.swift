@@ -6,6 +6,7 @@ struct CalendarWeekRow: View {
     let events: [Event]
     let todos: [Todo]
     let notes: [Note]
+    let workspaces: [Workspace]
     let onDateTap: (Date) -> Void
     
     private let calendar = Calendar.current
@@ -20,6 +21,7 @@ struct CalendarWeekRow: View {
                 }
             }
             .frame(height: 60)
+            .padding(.top, 4)
             .overlay(alignment: .bottom) {
                 if let monthBoundaryIndex = monthBoundaryDayIndex {
                     GeometryReader { geometry in
@@ -43,12 +45,29 @@ struct CalendarWeekRow: View {
             }
             
             VStack(spacing: 2) {
-                ForEach(eventsForWeek.prefix(3), id: \.id) { event in
+                // Show up to 4 events, then "..." if more
+                ForEach(eventsForWeek.prefix(4), id: \.id) { event in
                     eventBar(for: event)
                 }
+                
+                // Show "..." indicator if there are more events
+                if eventsForWeek.count > 4 {
+                    HStack {
+                        Text("...")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                            .padding(.leading, 4)
+                        Spacer()
+                    }
+                    .frame(height: 12)
+                }
             }
-            .frame(height: 30)
+            .frame(minHeight: 40, maxHeight: 80)
             .padding(.horizontal, 4)
+            
+            // Subtle divider line between weeks
+            Divider()
+                .background(AppTheme.Colors.textSecondary.opacity(0.2))
         }
     }
     
@@ -69,18 +88,31 @@ struct CalendarWeekRow: View {
         return Button(action: { onDateTap(date) }) {
             ZStack(alignment: .topTrailing) {
                 VStack(spacing: 2) {
-                    Text("\(calendar.component(.day, from: date))")
-                        .font(.system(size: 14, weight: calendar.isDateInToday(date) ? .bold : .regular))
-                        .foregroundColor(
-                            calendar.isDate(date, inSameDayAs: selectedDate) ? .white :
-                            calendar.isDateInToday(date) ? Color(hex: personalColor) :
-                            AppTheme.Colors.textPrimary
-                        )
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(calendar.isDate(date, inSameDayAs: selectedDate) ? Color(hex: personalColor) : Color.clear)
-                        )
+                    ZStack {
+                        Text("\(calendar.component(.day, from: date))")
+                            .font(.system(size: 14, weight: calendar.isDateInToday(date) ? .semibold : .regular))
+                            .foregroundColor(
+                                calendar.isDate(date, inSameDayAs: selectedDate) ? .white :
+                                AppTheme.Colors.textPrimary
+                            )
+                            .frame(width: 28, height: 28)
+                            .background(
+                                Circle()
+                                    .fill(calendar.isDate(date, inSameDayAs: selectedDate) ? Color(hex: personalColor) : Color.clear)
+                            )
+                        
+                        // Small grey dot for today (if not selected)
+                        if calendar.isDateInToday(date) && !calendar.isDate(date, inSameDayAs: selectedDate) {
+                            VStack {
+                                Spacer()
+                                Circle()
+                                    .fill(AppTheme.Colors.textSecondary)
+                                    .frame(width: 4, height: 4)
+                                    .offset(y: -2)
+                            }
+                            .frame(width: 28, height: 28)
+                        }
+                    }
                     
                     HStack(spacing: 2) {
                         ForEach(0..<min(itemsForDate.count, 3), id: \.self) { index in
@@ -117,8 +149,13 @@ struct CalendarWeekRow: View {
             return calendar.isDate(dueDate, inSameDayAs: date)
         }
         if !todosOnDate.isEmpty {
-            let personalColor = AuthService.shared.currentUser?.preferences.personalColor ?? "EF5350"
-            items.append(("todo", Color(hex: personalColor)))
+            if let todo = todosOnDate.first {
+                let color = ColorResolver.shared.colorForTodo(
+                    todo,
+                    workspace: ColorResolver.shared.findWorkspace(id: todo.workspaceId, in: workspaces)
+                )
+                items.append(("todo", color))
+            }
         }
         
         let notesOnDate = notes.filter { note in
@@ -126,7 +163,13 @@ struct CalendarWeekRow: View {
             return calendar.isDate(linkedDate, inSameDayAs: date)
         }
         if !notesOnDate.isEmpty {
-            items.append(("note", AppTheme.Colors.textSecondary))
+            if let note = notesOnDate.first {
+                let color = ColorResolver.shared.colorForNote(
+                    note,
+                    workspace: ColorResolver.shared.findWorkspace(id: note.workspaceId, in: workspaces)
+                )
+                items.append(("note", color))
+            }
         }
         
         return items
@@ -161,6 +204,12 @@ struct CalendarWeekRow: View {
         let startIndex = dates.firstIndex { calendar.isDate($0, inSameDayAs: eventStart) || $0 > eventStart } ?? 0
         let endIndex = dates.lastIndex { calendar.isDate($0, inSameDayAs: eventEnd) || $0 < eventEnd } ?? 6
         
+        // Determine event color using ColorResolver
+        let eventColor = ColorResolver.shared.colorHexForEvent(
+            event,
+            workspace: ColorResolver.shared.findWorkspace(id: event.workspaceId, in: workspaces)
+        )
+        
         return AnyView(
             GeometryReader { geometry in
                 let cellWidth = geometry.size.width / 7
@@ -170,30 +219,30 @@ struct CalendarWeekRow: View {
                 HStack(spacing: 0) {
                     if !event.isFirstDayOf(dates[startIndex]) {
                         Rectangle()
-                            .fill(Color(hex: event.color ?? "4CAF50"))
+                            .fill(Color(hex: eventColor))
                             .frame(width: 3)
                     }
                     
                     Text(event.isFirstDayOf(dates[startIndex]) ? event.title : "")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.white)
                         .lineLimit(1)
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(hex: event.color ?? "4CAF50"))
+                        .background(Color(hex: eventColor))
                     
                     if !event.isLastDayOf(dates[endIndex]) {
                         Rectangle()
-                            .fill(Color(hex: event.color ?? "4CAF50"))
+                            .fill(Color(hex: eventColor))
                             .frame(width: 3)
                     }
                 }
-                .frame(width: width, height: 16)
-                .cornerRadius(3)
+                .frame(width: width, height: 18)
+                .cornerRadius(4)
                 .offset(x: xOffset)
             }
-            .frame(height: 16)
+            .frame(height: 18)
         )
     }
 }

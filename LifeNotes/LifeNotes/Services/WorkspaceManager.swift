@@ -97,6 +97,17 @@ class WorkspaceManager: ObservableObject {
         }
     }
     
+    /// Create workspace from a Workspace object
+    func createWorkspace(_ workspace: Workspace) async throws {
+        do {
+            let docRef = try db.collection("workspaces").addDocument(from: workspace)
+            print("WorkspaceManager: Created workspace - \(workspace.name) with ID: \(docRef.documentID)")
+        } catch {
+            print("WorkspaceManager: Error creating workspace - \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
     deinit {
         workspacesListener?.remove()
     }

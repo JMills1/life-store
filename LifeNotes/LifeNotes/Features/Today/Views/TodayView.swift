@@ -9,6 +9,7 @@ struct TodayView: View {
     @EnvironmentObject var workspaceManager: WorkspaceManager
     @StateObject private var viewModel = TodayViewModel()
     @State private var selectedTodoForEdit: Todo?
+    @State private var selectedEvent: Event?
     
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -25,9 +26,7 @@ struct TodayView: View {
                 VStack(spacing: AppTheme.Spacing.lg) {
                     greetingHeader
                     
-                    if !viewModel.upcomingEvents.isEmpty {
-                        upcomingEventsCard
-                    }
+                    todayEventsCard
                     
                     todayTasksCard
                     
@@ -46,7 +45,9 @@ struct TodayView: View {
             .background(AppTheme.Colors.background)
             .navigationTitle("Today")
             .task {
+                print("📱 TodayView: Loading data for workspaces: \(workspaceManager.selectedWorkspaceIds)")
                 await viewModel.loadData(workspaceIds: workspaceManager.selectedWorkspaceIds)
+                print("📱 TodayView: Loaded \(viewModel.upcomingEvents.count) events, \(viewModel.todayTasks.count) tasks")
             }
             .refreshable {
                 await viewModel.loadData(workspaceIds: workspaceManager.selectedWorkspaceIds)
@@ -59,10 +60,13 @@ struct TodayView: View {
             .sheet(item: $selectedTodoForEdit) { todo in
                 TodoDetailView(todo: todo)
             }
+            .sheet(item: $selectedEvent) { event in
+                EventDetailView(event: event)
+            }
         }
     }
     
-    private var greetingHeader: some View {
+    var greetingHeader: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
             HStack {
                 Text("\(greeting), \(viewModel.userName)!")
@@ -92,43 +96,98 @@ struct TodayView: View {
         .cornerRadius(AppTheme.CornerRadius.medium)
     }
     
-    private var upcomingEventsCard: some View {
+    var todayEventsCard: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             HStack {
-                Image(systemName: "clock")
-                    .foregroundColor(AppTheme.Colors.primary)
-                Text("Upcoming (Next 2 hours)")
+                Image(systemName: "calendar")
+                    .foregroundColor(AppTheme.Colors.personalColor)
+                Text("Today's Events")
                     .font(AppTheme.Fonts.headline)
                     .foregroundColor(AppTheme.Colors.textPrimary)
+                
+                Spacer()
+                
+                Text("\(viewModel.upcomingEvents.count)")
+                    .font(AppTheme.Fonts.caption1)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppTheme.Colors.personalColor)
+                    .clipShape(Capsule())
             }
             
-            ForEach(viewModel.upcomingEvents) { event in
-                HStack {
-                    Rectangle()
-                        .fill(Color(hex: event.color ?? "4CAF50"))
-                        .frame(width: 4)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(event.title)
-                            .font(AppTheme.Fonts.body)
-                        Text(event.startDate, style: .time)
-                            .font(AppTheme.Fonts.caption1)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Text(timeUntil(event.startDate))
-                        .font(AppTheme.Fonts.caption1)
-                        .foregroundColor(AppTheme.Colors.primary)
-                        .padding(.horizontal, AppTheme.Spacing.sm)
-                        .padding(.vertical, 4)
-                        .background(AppTheme.Colors.primary.opacity(0.1))
+            if viewModel.upcomingEvents.isEmpty {
+                Text("No events today")
+                    .font(AppTheme.Fonts.subheadline)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else {
+                ForEach(viewModel.upcomingEvents) { event in
+                    Button(action: {
+                        selectedEvent = event
+                    }) {
+                        HStack {
+                            Rectangle()
+                                .fill(ColorResolver.shared.colorForEvent(
+                                    event,
+                                    workspace: ColorResolver.shared.findWorkspace(id: event.workspaceId, in: workspaceManager.availableWorkspaces)
+                                ))
+                                .frame(width: 4)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(event.title)
+                                    .font(AppTheme.Fonts.body)
+                                    .foregroundColor(AppTheme.Colors.textPrimary)
+                                
+                                HStack(spacing: 8) {
+                                    Text(event.startDate, style: .time)
+                                        .font(AppTheme.Fonts.caption1)
+                                        .foregroundColor(AppTheme.Colors.textSecondary)
+                                    
+                                    if let location = event.location {
+                                        Text("•")
+                                            .foregroundColor(AppTheme.Colors.textTertiary)
+                                        Text(location)
+                                            .font(AppTheme.Fonts.caption1)
+                                            .foregroundColor(AppTheme.Colors.textSecondary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            if event.startDate > Date() {
+                                Text(timeUntil(event.startDate))
+                                    .font(AppTheme.Fonts.caption1)
+                                    .foregroundColor(AppTheme.Colors.personalColor)
+                                    .padding(.horizontal, AppTheme.Spacing.sm)
+                                    .padding(.vertical, 4)
+                                    .background(AppTheme.Colors.personalColor.opacity(0.1))
+                                    .cornerRadius(AppTheme.CornerRadius.small)
+                            } else if event.endDate > Date() {
+                                Text("Now")
+                                    .font(AppTheme.Fonts.caption1)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, AppTheme.Spacing.sm)
+                                    .padding(.vertical, 4)
+                                    .background(AppTheme.Colors.success)
+                                    .cornerRadius(AppTheme.CornerRadius.small)
+                            }
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(AppTheme.Colors.textTertiary)
+                                .font(.system(size: 12))
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 8)
+                        .background(AppTheme.Colors.background)
                         .cornerRadius(AppTheme.CornerRadius.small)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(AppTheme.Spacing.sm)
-                .background(Color(hex: event.color ?? "4CAF50").opacity(0.05))
-                .cornerRadius(AppTheme.CornerRadius.small)
             }
         }
         .padding()
@@ -136,7 +195,7 @@ struct TodayView: View {
         .cornerRadius(AppTheme.CornerRadius.medium)
     }
     
-    private var todayTasksCard: some View {
+    var todayTasksCard: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             HStack {
                 Image(systemName: "checklist")
@@ -212,7 +271,7 @@ struct TodayView: View {
         .cornerRadius(AppTheme.CornerRadius.medium)
     }
     
-    private var pinnedNotesCard: some View {
+    var pinnedNotesCard: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             HStack {
                 Image(systemName: "pin.fill")
@@ -243,7 +302,7 @@ struct TodayView: View {
         .cornerRadius(AppTheme.CornerRadius.medium)
     }
     
-    private var familyUpdatesCard: some View {
+    var familyUpdatesCard: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
             HStack {
                 Image(systemName: "person.3.fill")
@@ -283,7 +342,7 @@ struct TodayView: View {
         .cornerRadius(AppTheme.CornerRadius.medium)
     }
     
-    private var statsCard: some View {
+    var statsCard: some View {
         HStack(spacing: AppTheme.Spacing.md) {
             StatBadge(
                 icon: "flame.fill",
@@ -311,7 +370,7 @@ struct TodayView: View {
         .cornerRadius(AppTheme.CornerRadius.medium)
     }
     
-    private func timeUntil(_ date: Date) -> String {
+    func timeUntil(_ date: Date) -> String {
         let minutes = Int(date.timeIntervalSinceNow / 60)
         if minutes < 60 {
             return "in \(minutes)m"
